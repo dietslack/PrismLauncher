@@ -69,6 +69,7 @@
 #include "ui/pages/global/ProxyPage.h"
 
 #include "ui/setupwizard/AutoJavaWizardPage.h"
+#include "ui/setupwizard/JavaDownloadWizardPage.h"
 #include "ui/setupwizard/JavaWizardPage.h"
 #include "ui/setupwizard/LanguageWizardPage.h"
 #include "ui/setupwizard/LoginWizardPage.h"
@@ -1262,8 +1263,8 @@ bool Application::createSetupWizard()
         QString actualPath = FS::ResolveExecutable(currentJavaPath);
         return actualPath.isNull();
     }();
-    bool askjava = BuildConfig.JAVA_DOWNLOADER_ENABLED && !javaRequired && !settings()->get("AutomaticJavaDownload").toBool() &&
-                   !settings()->get("AutomaticJavaSwitch").toBool() && !settings()->get("UserAskedAboutAutomaticJavaDownload").toBool();
+    // RePrism: always offer the Java download page once, even when automatic downloads are already on.
+    bool askjava = BuildConfig.JAVA_DOWNLOADER_ENABLED && !javaRequired && !settings()->get("UserAskedAboutAutomaticJavaDownload").toBool();
     bool languageRequired = settings()->get("Language").toString().isEmpty();
     bool pasteInterventionRequired = settings()->get("PastebinURL") != "";
     bool validWidgets = m_themeManager->isValidApplicationTheme(settings()->get("ApplicationTheme").toString());
@@ -1299,7 +1300,11 @@ bool Application::createSetupWizard()
         if (javaRequired) {
             setupWizard.addPage(new JavaWizardPage(&setupWizard));
         } else if (askjava) {
-            setupWizard.addPage(new AutoJavaWizardPage(&setupWizard));
+            if (!SysInfo::getSupportedJavaArchitecture().isEmpty()) {
+                setupWizard.addPage(new JavaDownloadWizardPage(&setupWizard));
+            } else {
+                setupWizard.addPage(new AutoJavaWizardPage(&setupWizard));
+            }
         }
 
         if (pasteInterventionRequired) {

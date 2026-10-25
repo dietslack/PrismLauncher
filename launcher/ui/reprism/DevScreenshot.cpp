@@ -6,6 +6,8 @@
 #include <QDir>
 #include <QTimer>
 #include <QWidget>
+#include <QAbstractButton>
+#include <QWizard>
 
 #include <cstdlib>
 
@@ -35,7 +37,18 @@ void install()
     const QString trigger = qEnvironmentVariable("REPRISM_SCREENSHOT_TRIGGER");
     if (!trigger.isEmpty()) {
         QTimer::singleShot(delay / 2, qApp, [trigger] {
-            if (auto* action = findAction(trigger))
+            if (trigger == "wizard:next") {
+                for (auto* window : QApplication::topLevelWidgets()) {
+                    if (auto* wizard = qobject_cast<QWizard*>(window); wizard && wizard->isVisible()) {
+                        if (wizard->nextId() == -1)
+                            wizard->button(QWizard::FinishButton)->click();
+                        else
+                            wizard->next();
+                        return;
+                    }
+                }
+                qWarning() << "DevScreenshot: no visible wizard";
+            } else if (auto* action = findAction(trigger))
                 action->trigger();
             else
                 qWarning() << "DevScreenshot: no action named" << trigger;

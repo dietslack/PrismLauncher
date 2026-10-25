@@ -24,6 +24,7 @@ if [ ! -f build/build.ninja ]; then
         -DCMAKE_INSTALL_PREFIX="$PWD/install" \
         -DENABLE_LTO=OFF \
         -DBUILD_TESTING=OFF \
+        -DLauncher_ENABLE_JAVA_DOWNLOADER=ON \
         "${KEY_ARGS[@]}"
 fi
 

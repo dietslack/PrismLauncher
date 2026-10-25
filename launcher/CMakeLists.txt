@@ -424,6 +424,8 @@ set(JAVA_SOURCES
     java/download/ManifestDownloadTask.cpp
     java/download/ManifestDownloadTask.h
     java/download/SymlinkTask.cpp
+    java/download/InstallMajorJavaTask.cpp
+    java/download/InstallMajorJavaTask.h
     java/download/SymlinkTask.h
 
     ui/java/InstallJavaDialog.h
@@ -841,6 +843,8 @@ SET(LAUNCHER_SOURCES
     ui/setupwizard/PasteWizardPage.h
     ui/setupwizard/ThemeWizardPage.h
     ui/setupwizard/AutoJavaWizardPage.cpp
+    ui/setupwizard/JavaDownloadWizardPage.cpp
+    ui/setupwizard/JavaDownloadWizardPage.h
     ui/setupwizard/AutoJavaWizardPage.h
     ui/setupwizard/LoginWizardPage.cpp
     ui/setupwizard/LoginWizardPage.h
