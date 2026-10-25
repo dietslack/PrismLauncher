@@ -7,6 +7,7 @@ namespace DevScreenshot {
 // QAction (by objectName) to trigger first, e.g. "actionSettings", to capture a dialog, or "wizard:next"
 // to advance/finish the setup wizard. REPRISM_SCREENSHOT_SIZE (e.g. "1200x760") resizes the main window,
 // REPRISM_SCREENSHOT_HOVER ("objectName:x,y") simulates hovering a widget, and REPRISM_SCREENSHOT_TYPE
-// ("objectName:text") sets the text of a line edit.
+// ("objectName:text") sets the text of a line edit. REPRISM_SCREENSHOT_CONTEXT ("objectName:x,y") opens a
+// context menu and REPRISM_SCREENSHOT_CLICK ("objectName") clicks a button, e.g. to open its menu.
 void install();
 }  // namespace DevScreenshot

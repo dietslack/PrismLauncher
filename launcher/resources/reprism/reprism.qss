@@ -100,35 +100,47 @@ QMenuBar::item:selected {
 }
 
 QMenu {
-    background-color: @surface@;
+    background-color: @surface2@;
     color: @text@;
-    border: 1px solid @border@;
-    border-radius: 10px;
+    border: 1px solid @borderStrong@;
+    border-radius: 12px;
     padding: 6px;
 }
 
 QMenu::item {
-    padding: 6px 24px 6px 12px;
-    border-radius: 6px;
+    padding: 7px 28px 7px 10px;
+    margin: 1px 0px;
+    border-radius: 8px;
     background: transparent;
 }
 
 QMenu::item:selected {
-    background-color: @accent@;
-    color: @accentText@;
+    background-color: @surface3@;
+    color: @text@;
 }
 
 QMenu::item:disabled {
     color: @muted@;
 }
 
+QMenu::item:disabled:selected {
+    background: transparent;
+}
+
 QMenu::separator {
     height: 1px;
     background: @border@;
-    margin: 5px 8px;
+    margin: 5px 6px;
 }
 
 QMenu::icon {
+    padding-left: 10px;
+}
+
+QMenu::indicator:checked {
+    image: url(theme:menu-check.svg);
+    width: 14px;
+    height: 14px;
     padding-left: 8px;
 }
 
@@ -352,15 +364,32 @@ QComboBox::down-arrow {
     height: 10px;
 }
 
+/* Combo box popups match the menus: raised surface, rounded, gray highlight. */
+QComboBoxPrivateContainer {
+    background: transparent;
+    border: none;
+}
+
 QComboBox QAbstractItemView {
-    background-color: @surface@;
+    background-color: @surface2@;
     color: @text@;
-    border: 1px solid @border@;
-    border-radius: 8px;
-    padding: 4px;
+    border: 1px solid @borderStrong@;
+    border-radius: 12px;
+    padding: 6px;
     outline: none;
-    selection-background-color: @accent@;
-    selection-color: @accentText@;
+    selection-background-color: @surface3@;
+    selection-color: @text@;
+}
+
+QComboBox QAbstractItemView::item {
+    min-height: 28px;
+    padding: 0px 8px;
+    border-radius: 8px;
+}
+
+QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected {
+    background-color: @surface3@;
+    color: @text@;
 }
 
 /* ---------- Check boxes and radio buttons ---------- */
@@ -795,13 +824,13 @@ QToolButton#reprismDetailsIcon:hover {
     background-color: @surface3@;
 }
 
-QToolButton#reprismSecondaryButton {
+QToolButton#reprismSecondaryButton, QToolButton#reprismMoreButton {
     background-color: @surface3@;
     border: 1px solid transparent;
     border-radius: 10px;
 }
 
-QToolButton#reprismSecondaryButton:hover {
+QToolButton#reprismSecondaryButton:hover, QToolButton#reprismMoreButton:hover {
     border-color: @borderStrong@;
 }
 

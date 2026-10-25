@@ -21,6 +21,7 @@ class ReprismTheme : public FusionTheme {
     double fadeAmount() override;
     QColor fadeColor() override;
     QStringList searchPaths() override;
+    void apply(bool initial) override;
 
     /// Named colors of this variant, as used for the @name@ placeholders in the stylesheet.
     const QMap<QString, QColor>& tokens() const { return m_tokens; }

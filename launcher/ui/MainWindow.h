@@ -240,6 +240,7 @@ class MainWindow : public QMainWindow {
     // RePrism: Modrinth-style shell (navigation rail, library header, details panel)
     void setupReprismShell();
     void refreshRecentInstances();
+    void applyReprismActionIcons();
 
    private:
     Ui::MainWindow* ui;

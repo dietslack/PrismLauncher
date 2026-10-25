@@ -112,6 +112,7 @@ InstanceDetailsPanel::InstanceDetailsPanel(const Actions& actions, QWidget* icon
     m_folderButton = makeSecondary(tr("Open folder"));
     connect(m_folderButton, &QToolButton::clicked, m_actions.folder, &QAction::trigger);
     m_moreButton = makeSecondary(tr("More actions"));
+    m_moreButton->setObjectName(QStringLiteral("reprismMoreButton"));
     m_moreButton->setMenu(m_actions.more);
     m_moreButton->setPopupMode(QToolButton::InstantPopup);
     m_moreButton->setProperty("hideMenuIndicator", true);

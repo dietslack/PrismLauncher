@@ -3,11 +3,13 @@
     <qresource prefix="/reprism">
         <file>reprism.qss</file>
         <file>dark/check.svg</file>
+        <file>dark/menu-check.svg</file>
         <file>dark/partial.svg</file>
         <file>dark/chevron-down.svg</file>
         <file>dark/chevron-up.svg</file>
         <file>dark/chevron-right.svg</file>
         <file>light/check.svg</file>
+        <file>light/menu-check.svg</file>
         <file>light/partial.svg</file>
         <file>light/chevron-down.svg</file>
         <file>light/chevron-up.svg</file>
@@ -31,5 +33,22 @@
         <file>icons/tag.svg</file>
         <file>icons/trash-2.svg</file>
         <file>icons/user-round.svg</file>
+        <file>icons/book-open.svg</file>
+        <file>icons/bug.svg</file>
+        <file>icons/cat.svg</file>
+        <file>icons/eraser.svg</file>
+        <file>icons/folder.svg</file>
+        <file>icons/image.svg</file>
+        <file>icons/info.svg</file>
+        <file>icons/message-circle.svg</file>
+        <file>icons/palette.svg</file>
+        <file>icons/refresh-cw.svg</file>
+        <file>icons/scroll-text.svg</file>
+        <file>icons/shirt.svg</file>
+        <file>icons/terminal.svg</file>
+        <file>icons/text-cursor-input.svg</file>
+        <file>icons/undo-2.svg</file>
+        <file>icons/users.svg</file>
+        <file>icons/x.svg</file>
     </qresource>
 </RCC>

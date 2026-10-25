@@ -1605,6 +1605,7 @@ void MainWindow::changeEvent(QEvent* event)
         m_details->refreshIcons();
         m_searchAction->setIcon(ReprismIcons::icon("search", palette().color(QPalette::PlaceholderText)));
         m_newInstanceButton->setIcon(ReprismIcons::icon("plus", palette().color(QPalette::HighlightedText)));
+        applyReprismActionIcons();
     }
     QMainWindow::changeEvent(event);
 }
@@ -1958,6 +1959,60 @@ void MainWindow::setupReprismShell()
 
     if (m_selectedInstance)
         m_details->setInstance(m_selectedInstance);
+    applyReprismActionIcons();
+}
+
+void MainWindow::applyReprismActionIcons()
+{
+    // Lucide icons for menu actions under the RePrism themes; the original icons return for other themes.
+    const std::pair<QAction*, const char*> icons[] = {
+        { ui->actionAddInstance, "plus" },
+        { ui->actionLaunchInstance, "play" },
+        { ui->actionKillInstance, "square" },
+        { ui->actionEditInstance, "pencil" },
+        { ui->actionRenameInstance, "text-cursor-input" },
+        { ui->actionChangeInstIcon, "image" },
+        { ui->actionChangeInstGroup, "tag" },
+        { ui->actionViewSelectedInstFolder, "folder-open" },
+        { ui->actionExportInstance, "share" },
+        { ui->actionCopyInstance, "copy" },
+        { ui->actionDeleteInstance, "trash-2" },
+        { ui->actionCreateInstanceShortcut, "external-link" },
+        { ui->actionUndoTrashInstance, "undo-2" },
+        { ui->actionSettings, "settings" },
+        { ui->actionManageAccounts, "users" },
+        { ui->actionManageSkins, "shirt" },
+        { ui->actionViewLog, "scroll-text" },
+        { ui->actionReportBug, "bug" },
+        { ui->actionOpenWiki, "book-open" },
+        { ui->actionDISCORD, "message-circle" },
+        { ui->actionMATRIX, "message-circle" },
+        { ui->actionREDDIT, "message-circle" },
+        { ui->actionAbout, "info" },
+        { ui->actionCheckUpdate, "refresh-cw" },
+        { ui->actionClearMetadata, "eraser" },
+        { ui->actionAddToPATH, "terminal" },
+        { ui->actionCloseWindow, "x" },
+        { ui->actionChangeTheme, "palette" },
+        { ui->actionCAT, "cat" },
+        { ui->actionViewLauncherRootFolder, "folder" },
+        { ui->actionViewInstanceFolder, "folder" },
+        { ui->actionViewCentralModsFolder, "folder" },
+        { ui->actionViewIconsFolder, "folder" },
+        { ui->actionViewLogsFolder, "folder" },
+        { ui->actionViewJavaFolder, "folder" },
+        { ui->actionViewSkinsFolder, "folder" },
+        { ui->actionViewCatPackFolder, "folder" },
+        { ui->actionViewIconThemeFolder, "folder" },
+        { ui->actionViewWidgetThemeFolder, "folder" },
+    };
+    const bool reprism = APPLICATION->settings()->get("ApplicationTheme").toString().startsWith("reprism_");
+    const QColor color = palette().color(QPalette::WindowText);
+    for (const auto& [action, name] : icons) {
+        if (!action->property("reprismOriginalIcon").isValid())
+            action->setProperty("reprismOriginalIcon", action->icon());
+        action->setIcon(reprism ? ReprismIcons::icon(name, color) : action->property("reprismOriginalIcon").value<QIcon>());
+    }
 }
 
 void MainWindow::refreshRecentInstances()

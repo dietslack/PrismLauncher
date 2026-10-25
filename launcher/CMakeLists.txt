@@ -823,6 +823,8 @@ SET(LAUNCHER_SOURCES
     ui/reprism/DevScreenshot.h
     ui/reprism/DevScreenshot.cpp
     ui/reprism/ReprismIcons.h
+    ui/reprism/ReprismStyle.h
+    ui/reprism/ReprismStyle.cpp
     ui/reprism/ReprismIcons.cpp
     ui/reprism/InstanceSummary.h
     ui/reprism/InstanceSummary.cpp

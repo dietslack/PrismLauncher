@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ReprismTheme.h"
 
+#include <QApplication>
+#include <QDir>
 #include <QFile>
 #include <QObject>
+#include <QStyleFactory>
+
+#include "Application.h"
+#include "ui/reprism/ReprismStyle.h"
+#include "ui/themes/HintOverrideProxyStyle.h"
 
 ReprismTheme::ReprismTheme(bool dark) : m_dark(dark)
 {
@@ -107,6 +114,16 @@ QString ReprismTheme::appStyleSheet()
         styleSheet.replace('@' + it.key() + '@', value);
     }
     return styleSheet;
+}
+
+void ReprismTheme::apply(bool)
+{
+    // Same as ITheme::apply, with ReprismStyle layered on top of the usual Fusion proxy.
+    APPLICATION->setStyleSheet(QString());
+    QApplication::setStyle(new ReprismStyle(new HintOverrideProxyStyle(QStyleFactory::create(qtTheme()))));
+    QApplication::setPalette(colorScheme());
+    APPLICATION->setStyleSheet(appStyleSheet());
+    QDir::setSearchPaths("theme", searchPaths());
 }
 
 QStringList ReprismTheme::searchPaths()

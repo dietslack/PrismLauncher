@@ -3,7 +3,10 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QAbstractButton>
 #include <QAbstractScrollArea>
+#include <QComboBox>
+#include <QContextMenuEvent>
 #include <QDir>
 #include <QLineEdit>
 #include <QMouseEvent>
@@ -71,6 +74,40 @@ void install()
             for (auto* window : QApplication::topLevelWidgets())
                 if (auto* edit = window->findChild<QLineEdit*>(name))
                     edit->setText(text);
+        });
+    }
+
+    // "objectName:x,y" opens that widget's context menu; "objectName" clicks a button (e.g. a menu button).
+    const QString context = qEnvironmentVariable("REPRISM_SCREENSHOT_CONTEXT");
+    const QString click = qEnvironmentVariable("REPRISM_SCREENSHOT_CLICK");
+    if (!context.isEmpty() || !click.isEmpty()) {
+        // after REPRISM_SCREENSHOT_TRIGGER (delay / 2), so dialogs it opens can be targeted too
+        QTimer::singleShot(delay * 2 / 3, qApp, [context, click] {
+            for (auto* window : QApplication::topLevelWidgets()) {
+                if (!click.isEmpty()) {
+                    if (auto* button = window->findChild<QAbstractButton*>(click)) {
+                        button->click();
+                        return;
+                    }
+                    if (auto* combo = window->findChild<QComboBox*>(click)) {
+                        combo->showPopup();
+                        return;
+                    }
+                }
+                const auto target = context.split(':');
+                if (target.size() != 2)
+                    continue;
+                QWidget* widget = window->findChild<QWidget*>(target[0]);
+                const auto coords = target[1].split(',');
+                if (!widget || coords.size() != 2)
+                    continue;
+                if (auto* area = qobject_cast<QAbstractScrollArea*>(widget))
+                    widget = area->viewport();
+                const QPoint pos(coords[0].toInt(), coords[1].toInt());
+                QContextMenuEvent event(QContextMenuEvent::Mouse, pos, widget->mapToGlobal(pos));
+                QApplication::sendEvent(widget, &event);
+                return;
+            }
         });
     }
 
