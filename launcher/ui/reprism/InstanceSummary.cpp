@@ -17,47 +17,65 @@
 
 namespace InstanceSummary {
 
-static QHash<QString, QString> s_versionLines;
+static QHash<QString, Components> s_components;
 
 // Lets lupdate find the strings below under the "InstanceSummary" context.
 struct Strings {
     Q_DECLARE_TR_FUNCTIONS(InstanceSummary)
 };
 
-QString versionLine(MinecraftInstance* instance)
+Components components(MinecraftInstance* instance)
 {
     if (!instance)
         return {};
-    if (auto it = s_versionLines.constFind(instance->id()); it != s_versionLines.constEnd())
+    if (auto it = s_components.constFind(instance->id()); it != s_components.constEnd())
         return *it;
 
     // Read the component list straight from mmc-pack.json: cheap, and works without downloaded metadata.
-    QHash<QString, QString> components;
+    QHash<QString, QString> versions;
     QFile pack(instance->instanceRoot() + "/mmc-pack.json");
     if (pack.open(QIODevice::ReadOnly)) {
         const auto array = QJsonDocument::fromJson(pack.readAll()).object().value("components").toArray();
         for (const auto& value : array) {
             const auto component = value.toObject();
-            components.insert(component.value("uid").toString(), component.value("version").toString());
+            versions.insert(component.value("uid").toString(), component.value("version").toString());
         }
     }
-    const QString minecraft = components.value("net.minecraft");
 
-    static const std::pair<const char*, const char*> loaders[] = {
-        { "net.neoforged", "NeoForge" },           { "net.minecraftforge", "Forge" },      { "net.fabricmc.fabric-loader", "Fabric" },
-        { "org.quiltmc.quilt-loader", "Quilt" },   { "com.mumfrey.liteloader", "LiteLoader" },
+    static const struct {
+        const char* uid;
+        const char* name;
+        const char* icon;
+    } loaders[] = {
+        { "net.neoforged", "NeoForge", "neoforged" },         { "net.minecraftforge", "Forge", "forge" },
+        { "net.fabricmc.fabric-loader", "Fabric", "fabricmc" }, { "org.quiltmc.quilt-loader", "Quilt", "quiltmc" },
+        { "com.mumfrey.liteloader", "LiteLoader", "liteloader" },
     };
-    QString loader = Strings::tr("Minecraft");
-    for (const auto& [uid, name] : loaders) {
-        if (!components.value(uid).isEmpty()) {
-            loader = name;
+    Components result;
+    result.minecraft = versions.value("net.minecraft");
+    for (const auto& loader : loaders) {
+        if (!versions.value(loader.uid).isEmpty()) {
+            result.loader = loader.name;
+            result.loaderIconKey = loader.icon;
             break;
         }
     }
+    s_components.insert(instance->id(), result);
+    return result;
+}
 
-    QString line = minecraft.isEmpty() ? loader : QString("%1 %2").arg(loader, minecraft);
-    s_versionLines.insert(instance->id(), line);
-    return line;
+QString versionLine(MinecraftInstance* instance)
+{
+    const Components c = components(instance);
+    const QString loader = c.loader.isEmpty() ? Strings::tr("Minecraft") : c.loader;
+    return c.minecraft.isEmpty() ? loader : QString("%1 %2").arg(loader, c.minecraft);
+}
+
+QString versionChip(MinecraftInstance* instance)
+{
+    if (instance && instance->isManagedPack() && !instance->getManagedPackVersionName().isEmpty())
+        return instance->getManagedPackVersionName();
+    return components(instance).minecraft;
 }
 
 QString lastPlayedLine(MinecraftInstance* instance)
@@ -105,9 +123,9 @@ QString playtimeLine(MinecraftInstance* instance)
 void invalidate(const QString& instanceId)
 {
     if (instanceId.isEmpty())
-        s_versionLines.clear();
+        s_components.clear();
     else
-        s_versionLines.remove(instanceId);
+        s_components.remove(instanceId);
 }
 
 }  // namespace InstanceSummary

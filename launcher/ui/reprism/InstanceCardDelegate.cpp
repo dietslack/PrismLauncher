@@ -32,7 +32,7 @@ QFont nameFont()
 
 int textBlockHeight()
 {
-    return QFontMetrics(nameFont()).height() + 2 * (QFontMetrics(QApplication::font()).height() + LineGap);
+    return QFontMetrics(nameFont()).height() + QFontMetrics(QApplication::font()).height() + LineGap;
 }
 
 int infoHeight()
@@ -207,6 +207,42 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         drawFit(painter, trimmedIcon(iconKey, icon, qRound(square.width() * dpr)), square);
     }
 
+    // Chips over the icon's top-right corner: mod loader icon, then the pack version (or Minecraft version).
+    {
+        constexpr int ChipHeight = 26, ChipMargin = 10, ChipGap = 6, ChipRadius = 8, LoaderIcon = 16;
+        QColor chipColor = pal.color(QPalette::Button);
+        chipColor.setAlphaF(0.88);
+        QFont chipFont = QApplication::font();
+        chipFont.setBold(true);
+        chipFont.setPointSizeF(chipFont.pointSizeF() * 0.9);
+        const QFontMetrics chipMetrics(chipFont);
+
+        int right = card.right() - ChipMargin + 1;
+        const int top = card.top() + ChipMargin;
+        const QString version = InstanceSummary::versionChip(instance);
+        if (!version.isEmpty()) {
+            const int maxText = card.width() / 2;
+            const QString text = chipMetrics.elidedText(version, Qt::ElideRight, maxText);
+            const QRect chip(right - (chipMetrics.horizontalAdvance(text) + 20), top, chipMetrics.horizontalAdvance(text) + 20, ChipHeight);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(chipColor);
+            painter->drawRoundedRect(chip, ChipRadius, ChipRadius);
+            painter->setFont(chipFont);
+            painter->setPen(pal.color(QPalette::Text));
+            painter->drawText(chip, Qt::AlignCenter, text);
+            right = chip.left() - ChipGap;
+        }
+        const QString loaderIcon = InstanceSummary::components(instance).loaderIconKey;
+        if (!loaderIcon.isEmpty()) {
+            const QRect chip(right - ChipHeight, top, ChipHeight, ChipHeight);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(chipColor);
+            painter->drawRoundedRect(chip, ChipRadius, ChipRadius);
+            const QImage image = ReprismIcons::nearestNeighbor(APPLICATION->icons()->getIcon(loaderIcon), LoaderIcon, dpr);
+            painter->drawImage(QRect(chip.center().x() - LoaderIcon / 2 + 1, chip.center().y() - LoaderIcon / 2 + 1, LoaderIcon, LoaderIcon), image);
+        }
+    }
+
     // Info panel, sliding up over the icon as the card is hovered.
     const int panelHeight = infoHeight() + qRound(expandHeight() * progress);
     const QRect panel(card.left(), card.bottom() + 1 - panelHeight, card.width(), panelHeight);
@@ -240,11 +276,8 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         secondary = InstanceSummary::lastPlayedLine(instance);
     painter->setFont(QApplication::font());
     painter->setPen(muted);
-    for (const QString& line : { InstanceSummary::versionLine(instance), secondary }) {
-        painter->drawText(QRect(textLeft, y, textWidth, metrics.height()), Qt::AlignLeft | Qt::AlignVCenter,
-                          metrics.elidedText(line, Qt::ElideRight, textWidth));
-        y += metrics.height() + LineGap;
-    }
+    painter->drawText(QRect(textLeft, y, textWidth, metrics.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                      metrics.elidedText(secondary, Qt::ElideRight, textWidth));
 
     // Play / Stop button, revealed by the hover expansion.
     if (progress > 0) {
