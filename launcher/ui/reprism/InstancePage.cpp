@@ -146,8 +146,13 @@ void InstancePage::refreshHeader()
 void InstancePage::showTab(int index)
 {
     m_stack->setCurrentIndex(index);
-    if (!m_instance || m_loaded.value(index))
+    if (!m_instance)
         return;
+    if (m_loaded.value(index)) {
+        if (index == WorldsIndex)
+            m_worlds->reload();  // cheap, and catches anything the file watchers missed
+        return;
+    }
     m_loaded[index] = true;
     switch (index) {
         case ContentIndex:

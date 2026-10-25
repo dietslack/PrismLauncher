@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class MinecraftInstance;
+class QFileSystemWatcher;
 class QLabel;
 class QListWidget;
 class QListWidgetItem;
@@ -20,12 +21,17 @@ class WorldsTab : public QWidget {
     void populate();
 
    private:
+    void queuePopulate();
+    void watchFiles();
+
+   private:
     void addSection(const QString& title);
     void join(QListWidgetItem* item);
     void showContextMenu(const QPoint& pos);
 
     MinecraftInstance* m_instance = nullptr;
     bool m_populateQueued = false;
+    QFileSystemWatcher* m_watcher;  ///< instance folder, saves and servers.dat
     QListWidget* m_list;
     QLabel* m_hint;
 };

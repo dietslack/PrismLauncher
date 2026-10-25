@@ -310,8 +310,10 @@ ContentModel::ContentModel(QObject* parent) : QAbstractTableModel(parent) {}
 
 void ContentModel::setInstance(MinecraftInstance* instance)
 {
-    for (const auto& [model, type] : m_folders)
+    for (const auto& [model, type] : m_folders) {
         disconnect(model, nullptr, this, nullptr);
+        model->stopWatching();
+    }
     m_folders.clear();
     m_worldNames.clear();
     m_ownedFolders.clear();
@@ -336,6 +338,7 @@ void ContentModel::setInstance(MinecraftInstance* instance)
         }
     }
     for (const auto& [model, type] : m_folders) {
+        model->startWatching();  // pick up files added or removed outside the launcher
         connect(model, &QAbstractItemModel::modelReset, this, &ContentModel::rebuild);
         connect(model, &QAbstractItemModel::rowsInserted, this, &ContentModel::rebuild);
         connect(model, &QAbstractItemModel::rowsRemoved, this, &ContentModel::rebuild);

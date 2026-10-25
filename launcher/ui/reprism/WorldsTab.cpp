@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QFile>
+#include <QFileSystemWatcher>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
@@ -174,30 +175,67 @@ WorldsTab::WorldsTab(QWidget* parent) : QWidget(parent)
     m_hint->setObjectName(QStringLiteral("reprismMuted"));
     layout->addWidget(m_hint);
 
+    // Worlds and servers change while the launcher is open (mostly while playing): watch the files.
+    m_watcher = new QFileSystemWatcher(this);
+    auto changed = [this] {
+        watchFiles();  // folders/files may have been created or replaced
+        reload();
+    };
+    connect(m_watcher, &QFileSystemWatcher::directoryChanged, this, changed);
+    connect(m_watcher, &QFileSystemWatcher::fileChanged, this, changed);
+
     connect(m_list, &QListWidget::itemDoubleClicked, this, &WorldsTab::join);
     connect(m_list, &QWidget::customContextMenuRequested, this, &WorldsTab::showContextMenu);
 }
 
 void WorldsTab::setInstance(MinecraftInstance* instance)
 {
-    if (m_instance)
+    if (m_instance) {
         disconnect(m_instance->worldList(), nullptr, this, nullptr);
+        disconnect(m_instance, nullptr, this, nullptr);
+        m_instance->worldList()->stopWatching();
+    }
     m_instance = instance;
     if (m_instance) {
         // World details load after the list itself; repopulate (once per event-loop pass) as they arrive.
-        auto queuePopulate = [this] {
-            if (m_populateQueued)
-                return;
-            m_populateQueued = true;
-            QMetaObject::invokeMethod(this, &WorldsTab::populate, Qt::QueuedConnection);
-        };
         WorldList* worlds = m_instance->worldList();
-        connect(worlds, &QAbstractItemModel::modelReset, this, queuePopulate);
-        connect(worlds, &QAbstractItemModel::dataChanged, this, queuePopulate);
-        connect(worlds, &QAbstractItemModel::rowsInserted, this, queuePopulate);
-        connect(worlds, &QAbstractItemModel::rowsRemoved, this, queuePopulate);
+        connect(worlds, &QAbstractItemModel::modelReset, this, &WorldsTab::queuePopulate);
+        connect(worlds, &QAbstractItemModel::dataChanged, this, &WorldsTab::queuePopulate);
+        connect(worlds, &QAbstractItemModel::rowsInserted, this, &WorldsTab::queuePopulate);
+        connect(worlds, &QAbstractItemModel::rowsRemoved, this, &WorldsTab::queuePopulate);
+        worlds->startWatching();
+        // New worlds and servers usually appear while playing: refresh when the game closes.
+        connect(m_instance, &BaseInstance::runningStatusChanged, this, [this](bool running) {
+            if (!running)
+                reload();
+        });
     }
+    watchFiles();
     reload();
+}
+
+void WorldsTab::queuePopulate()
+{
+    if (m_populateQueued)
+        return;
+    m_populateQueued = true;
+    QMetaObject::invokeMethod(this, &WorldsTab::populate, Qt::QueuedConnection);
+}
+
+void WorldsTab::watchFiles()
+{
+    if (!m_watcher->files().isEmpty())
+        m_watcher->removePaths(m_watcher->files());
+    if (!m_watcher->directories().isEmpty())
+        m_watcher->removePaths(m_watcher->directories());
+    if (!m_instance)
+        return;
+    QStringList paths;
+    for (const QString& path : { m_instance->gameRoot(), m_instance->worldDir(), FS::PathCombine(m_instance->gameRoot(), "servers.dat") })
+        if (QFileInfo::exists(path))
+            paths.append(path);
+    if (!paths.isEmpty())
+        m_watcher->addPaths(paths);
 }
 
 void WorldsTab::addSection(const QString& title)
@@ -211,7 +249,7 @@ void WorldsTab::reload()
 {
     if (m_instance)
         m_instance->worldList()->update();
-    populate();
+    queuePopulate();
 }
 
 void WorldsTab::populate()
