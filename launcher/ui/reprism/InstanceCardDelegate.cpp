@@ -74,15 +74,44 @@ QColor iconTint(const QString& key, const QIcon& icon)
     return tint;
 }
 
-/// Icon pixmap at `size`, upscaled without smoothing when the source is small pixel art.
-QPixmap iconPixmap(const QIcon& icon, int size, qreal dpr)
+/// The icon's artwork with any fully transparent margin trimmed off, at its largest native size.
+QImage trimmedIcon(const QString& key, const QIcon& icon)
 {
-    const QSize target(qRound(size * dpr), qRound(size * dpr));
-    QPixmap pm = icon.pixmap(target);
-    if (pm.width() < target.width())
-        pm = pm.scaled(target, Qt::KeepAspectRatio, pm.width() * 2 <= target.width() ? Qt::FastTransformation : Qt::SmoothTransformation);
-    pm.setDevicePixelRatio(dpr);
-    return pm;
+    static QHash<QString, QImage> s_cache;
+    if (auto it = s_cache.constFind(key); it != s_cache.constEnd())
+        return *it;
+    const QImage image = icon.pixmap(256, 256).toImage().convertToFormat(QImage::Format_ARGB32);
+    int left = image.width(), top = image.height(), right = -1, bottom = -1;
+    for (int y = 0; y < image.height(); y++) {
+        const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+        for (int x = 0; x < image.width(); x++) {
+            if (qAlpha(line[x]) > 8) {
+                left = qMin(left, x);
+                right = qMax(right, x);
+                top = qMin(top, y);
+                bottom = qMax(bottom, y);
+            }
+        }
+    }
+    QImage trimmed = right < 0 ? image : image.copy(QRect(QPoint(left, top), QPoint(right, bottom)));
+    s_cache.insert(key, trimmed);
+    return trimmed;
+}
+
+/// Draws `image` scaled to cover `area` (like CSS object-fit: cover), keeping small pixel art crisp.
+void drawCover(QPainter* painter, const QImage& image, const QRect& area)
+{
+    if (image.isNull())
+        return;
+    const qreal scale = qMax(qreal(area.width()) / image.width(), qreal(area.height()) / image.height());
+    const QSizeF size(image.width() * scale, image.height() * scale);
+    const QRectF target(area.center().x() + 0.5 - size.width() / 2, area.center().y() + 0.5 - size.height() / 2, size.width(), size.height());
+    painter->save();
+    painter->setClipRect(area, Qt::IntersectClip);
+    // Small sources are pixel art: scale them with nearest-neighbour so they stay sharp.
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, image.width() * 2 > target.width());
+    painter->drawImage(target, image);
+    painter->restore();
 }
 
 QRect playRectFor(const QRect& card, qreal progress)
@@ -153,7 +182,7 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     const QColor surface = pal.color(QPalette::Button);
     painter->fillRect(card, surface);
 
-    // Icon area: backdrop tinted from the icon's colors, with the icon large in the middle.
+    // Icon area: backdrop tinted from the icon's colors (shows through transparent icons), icon filling the area.
     const QString iconKey = instance ? instance->iconKey() : QStringLiteral("default");
     const QIcon icon = APPLICATION->icons()->getIcon(iconKey);
     const QRect iconArea(card.left(), card.top(), card.width(), IconAreaHeight + qRound(CardRadius));
@@ -165,9 +194,8 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         gradient.setColorAt(1.0, mix(base, tint, 0.16));
         painter->fillRect(iconArea, gradient);
 
-        const int size = qMin(96, IconAreaHeight - 2 * Padding - 16);
-        const QPixmap pm = iconPixmap(icon, size, dpr);
-        painter->drawPixmap(QRect(card.center().x() - size / 2, card.top() + (IconAreaHeight - size) / 2, size, size), pm);
+        // The icon's artwork (transparent margins trimmed) fills the whole icon area, cropped evenly.
+        drawCover(painter, trimmedIcon(iconKey, icon), QRect(card.left(), card.top(), card.width(), IconAreaHeight));
     }
 
     // Info panel, sliding up over the icon as the card is hovered.
