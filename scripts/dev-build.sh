@@ -10,6 +10,16 @@ MESA="$(brew --prefix mesa)"
 export JAVA_HOME="$(brew --prefix openjdk@17)"
 export PATH="$JAVA_HOME/bin:$PATH"
 
+# Runtime Qt plugins (SVG icons, WebP modpack icons) must exist and match qtbase's version exactly.
+QT_VERSION="$(brew list --versions qtbase | awk '{print $2}')"
+for pkg in qtsvg qtimageformats; do
+    v="$(brew list --versions "$pkg" | awk '{print $2}')"
+    if [ "$v" != "$QT_VERSION" ]; then
+        echo "warning: $pkg is '${v:-not installed}' but qtbase is $QT_VERSION; icons may not load." >&2
+        echo "         fix with: brew install $pkg && brew upgrade $pkg" >&2
+    fi
+done
+
 KEY_ARGS=()
 [ -n "${MSA_CLIENT_ID:-}" ] && KEY_ARGS+=("-DLauncher_MSA_CLIENT_ID=$MSA_CLIENT_ID")
 [ -n "${CURSEFORGE_API_KEY:-}" ] && KEY_ARGS+=("-DLauncher_CURSEFORGE_API_KEY=$CURSEFORGE_API_KEY")
