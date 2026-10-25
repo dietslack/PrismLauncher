@@ -7,6 +7,7 @@
 
 class MinecraftInstance;
 class QButtonGroup;
+class QComboBox;
 class QLabel;
 class QLineEdit;
 class QTreeView;
@@ -19,7 +20,7 @@ class ContentModel : public QAbstractTableModel {
    public:
     enum class Type { Mod, ResourcePack, DataPack, Shader };
     enum Column { NameColumn, VersionColumn, TypeColumn, SourceColumn, ColumnCount };
-    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole };
+    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole };
 
     explicit ContentModel(QObject* parent = nullptr);
     void setInstance(MinecraftInstance* instance);
@@ -63,6 +64,7 @@ class ContentFilterProxy : public QSortFilterProxyModel {
 
    protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;
+    bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
 
    private:
     int m_type = -1;
@@ -78,6 +80,7 @@ class ContentTab : public QWidget {
 
    private:
     void updateCounts();
+    void applySort(int option);
     void showContextMenu(const QPoint& pos);
     void addFiles(ContentModel::Type type);
     QList<int> selectedRows() const;
@@ -87,6 +90,7 @@ class ContentTab : public QWidget {
     ContentFilterProxy* m_proxy;
     QTreeView* m_view;
     QLineEdit* m_search;
+    QComboBox* m_sort;
     QButtonGroup* m_filters;
     QLabel* m_summary;
 };

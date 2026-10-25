@@ -71,9 +71,12 @@ void install()
     const QString type = qEnvironmentVariable("REPRISM_SCREENSHOT_TYPE");  // e.g. "reprismSearch:sky"
     if (const int colon = type.indexOf(':'); colon > 0) {
         QTimer::singleShot(delay / 2, qApp, [name = type.left(colon), text = type.mid(colon + 1)] {
-            for (auto* window : QApplication::topLevelWidgets())
+            for (auto* window : QApplication::topLevelWidgets()) {
                 if (auto* edit = window->findChild<QLineEdit*>(name))
                     edit->setText(text);
+                else if (auto* combo = window->findChild<QComboBox*>(name))
+                    combo->setCurrentIndex(text.toInt());
+            }
         });
     }
 

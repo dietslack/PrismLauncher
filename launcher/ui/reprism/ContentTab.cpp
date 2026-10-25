@@ -2,6 +2,7 @@
 #include "ContentTab.h"
 
 #include <QButtonGroup>
+#include <QComboBox>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QHBoxLayout>
@@ -148,6 +149,8 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
         return static_cast<int>(entry.type);
     if (role == FileNameRole)
         return res->fileinfo().fileName();
+    if (role == DateRole)
+        return res->dateTimeChanged();
     if (role == Qt::ToolTipRole)
         return res->fileinfo().fileName();
     if (role == Qt::ForegroundRole && !res->enabled())
@@ -240,6 +243,14 @@ void ContentFilterProxy::setSearch(const QString& text)
     invalidateFilter();
 }
 
+bool ContentFilterProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const
+{
+    if (sortRole() == ContentModel::DateRole)
+        return left.data(ContentModel::DateRole).toDateTime() < right.data(ContentModel::DateRole).toDateTime();
+    // Alphabetical, case-insensitive, following the user's locale.
+    return QString::localeAwareCompare(left.data(Qt::DisplayRole).toString().toLower(), right.data(Qt::DisplayRole).toString().toLower()) < 0;
+}
+
 bool ContentFilterProxy::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
 {
     const QModelIndex index = sourceModel()->index(sourceRow, ContentModel::NameColumn, sourceParent);
@@ -280,6 +291,12 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     m_filters->button(0)->setChecked(true);
     toolbar->addStretch(1);
 
+    m_sort = new QComboBox(this);
+    m_sort->setObjectName(QStringLiteral("reprismSort"));
+    m_sort->setToolTip(tr("Sort content"));
+    m_sort->addItems({ tr("Name (A–Z)"), tr("Name (Z–A)"), tr("Newest first"), tr("Oldest first") });
+    toolbar->addWidget(m_sort);
+
     m_search = new QLineEdit(this);
     m_search->setObjectName(QStringLiteral("reprismSearch"));
     m_search->setPlaceholderText(tr("Search content…"));
@@ -312,8 +329,9 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     m_view->setModel(m_proxy);
     m_view->setRootIsDecorated(false);
     m_view->setUniformRowHeights(true);
-    m_view->setSortingEnabled(true);
-    m_view->sortByColumn(ContentModel::NameColumn, Qt::AscendingOrder);
+    m_view->setSortingEnabled(false);  // the Sort dropdown drives sorting
+    m_view->header()->setSortIndicatorShown(false);
+    m_proxy->setDynamicSortFilter(true);
     m_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_view->setIconSize(QSize(28, 28));
     m_view->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -329,6 +347,8 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
 
     connect(m_filters, &QButtonGroup::idClicked, this, [this](int id) { m_proxy->setTypeFilter(id - 1); });
     connect(m_search, &QLineEdit::textChanged, m_proxy, &ContentFilterProxy::setSearch);
+    connect(m_sort, &QComboBox::currentIndexChanged, this, &ContentTab::applySort);
+    applySort(0);
     connect(m_model, &QAbstractItemModel::modelReset, this, &ContentTab::updateCounts);
     connect(m_model, &QAbstractItemModel::dataChanged, this, &ContentTab::updateCounts);
     connect(m_proxy, &QAbstractItemModel::rowsInserted, this, &ContentTab::updateCounts);
@@ -348,6 +368,15 @@ void ContentTab::setInstance(MinecraftInstance* instance)
     m_instance = instance;
     m_model->setInstance(instance);
     m_model->reload();
+}
+
+void ContentTab::applySort(int option)
+{
+    // 0: name A–Z, 1: name Z–A, 2: newest first, 3: oldest first
+    const bool byDate = option >= 2;
+    m_proxy->setSortRole(byDate ? ContentModel::DateRole : Qt::DisplayRole);
+    const bool ascending = option == 0 || option == 3;
+    m_proxy->sort(ContentModel::NameColumn, ascending ? Qt::AscendingOrder : Qt::DescendingOrder);
 }
 
 void ContentTab::updateCounts()

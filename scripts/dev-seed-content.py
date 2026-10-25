@@ -36,6 +36,12 @@ for mod_id, name, version, color in mods:
             "authors": ["Someone"], "description": f"{name} for testing."}
     write_zip(f"{game}/mods/{mod_id}-{version}.jar", {"fabric.mod.json": json.dumps(meta), "icon.png": png(color)})
 os.rename(f"{game}/mods/modmenu-13.0.2.jar", f"{game}/mods/modmenu-13.0.2.jar.disabled")
+# staggered "added" dates (days ago) so date sorting is visible
+import time as _t
+for days, name in [(40, "sodium-0.6.5.jar"), (12, "lithium-0.14.3.jar"), (3, "iris-1.8.1.jar"), (60, "fabric-api-0.110.5.jar"),
+                   (25, "modmenu-13.0.2.jar.disabled")]:
+    stamp = _t.time() - days * 86400
+    os.utime(f"{game}/mods/{name}", (stamp, stamp))
 
 write_zip(f"{game}/resourcepacks/Faithful 32x.zip",
           {"pack.mcmeta": json.dumps({"pack": {"pack_format": 42, "description": "Faithful"}}), "pack.png": png((180, 140, 90))})
