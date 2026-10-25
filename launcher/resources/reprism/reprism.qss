@@ -742,8 +742,22 @@ QPushButton#reprismPrimaryButton, QPushButton#reprismPlayButton, QToolButton#rep
     font-weight: 600;
 }
 
+QPushButton#reprismPlayButton {
+    min-height: 24px;
+    padding: 10px 16px;
+}
+
+/* Play + launch options render as one split button with a divider. */
+QPushButton#reprismPlayButton[joined="true"] {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
 QToolButton#reprismPlayMenuButton {
     padding: 0px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border-left: 1px solid @accentDivider@;
 }
 
 QPushButton#reprismPrimaryButton:hover, QPushButton#reprismPlayButton:hover, QToolButton#reprismPlayMenuButton:hover {

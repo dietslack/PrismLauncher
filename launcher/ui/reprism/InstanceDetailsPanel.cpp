@@ -4,6 +4,7 @@
 #include <QAction>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
 #include <QMenu>
 #include <QPushButton>
 #include <QStackedLayout>
@@ -14,6 +15,11 @@
 #include "minecraft/MinecraftInstance.h"
 #include "ui/reprism/InstanceSummary.h"
 #include "ui/reprism/ReprismIcons.h"
+
+namespace {
+constexpr int PlayIconSize = 16;
+constexpr int PlayIconGap = 6;
+}  // namespace
 
 InstanceDetailsPanel::InstanceDetailsPanel(const Actions& actions, QWidget* iconButton, QWidget* nameLabel, QWidget* parent)
     : QFrame(parent), m_actions(actions)
@@ -64,11 +70,11 @@ InstanceDetailsPanel::InstanceDetailsPanel(const Actions& actions, QWidget* icon
 
     // Play / Stop, with the launch options menu (offline, profilers, ...) on a small attached button.
     auto* playRow = new QHBoxLayout();
-    playRow->setSpacing(6);
+    playRow->setSpacing(0);  // Play and the launch options form one split button
     m_playButton = new QPushButton(this);
     m_playButton->setObjectName(QStringLiteral("reprismPlayButton"));
-    m_playButton->setMinimumHeight(44);
-    m_playButton->setIconSize(QSize(18, 18));
+    m_playButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    m_playButton->setIconSize(QSize(PlayIconSize + PlayIconGap, PlayIconSize));
     m_playButton->setCursor(Qt::PointingHandCursor);
     connect(m_playButton, &QPushButton::clicked, this, [this] {
         if (m_instance && m_instance->isRunning())
@@ -78,7 +84,8 @@ InstanceDetailsPanel::InstanceDetailsPanel(const Actions& actions, QWidget* icon
     });
     m_launchMenuButton = new QToolButton(this);
     m_launchMenuButton->setObjectName(QStringLiteral("reprismPlayMenuButton"));
-    m_launchMenuButton->setFixedSize(36, 44);
+    m_launchMenuButton->setFixedWidth(40);
+    m_launchMenuButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);  // match the Play button's height
     m_launchMenuButton->setPopupMode(QToolButton::InstantPopup);
     m_launchMenuButton->setProperty("hideMenuIndicator", true);
     m_launchMenuButton->setToolTip(tr("Launch options"));
@@ -139,6 +146,7 @@ void InstanceDetailsPanel::updatePlayButton()
     const bool running = m_instance && m_instance->isRunning();
     m_playButton->setText(running ? tr("Stop") : tr("Play"));
     m_playButton->setProperty("running", running);
+    m_playButton->setProperty("joined", !running && m_actions.launch->menu());
     m_playButton->setEnabled(running ? m_actions.kill->isEnabled() : m_actions.launch->isEnabled());
     m_playButton->style()->unpolish(m_playButton);
     m_playButton->style()->polish(m_playButton);
@@ -152,7 +160,19 @@ void InstanceDetailsPanel::refreshIcons()
 {
     const QPalette pal = palette();
     const bool running = m_instance && m_instance->isRunning();
-    m_playButton->setIcon(ReprismIcons::icon(running ? "square" : "play", pal.color(QPalette::HighlightedText), true));
+    // Pad the glyph on the right: QPushButton has no icon/text spacing of its own.
+    const QColor glyphColor = running ? pal.color(QPalette::ButtonText) : pal.color(QPalette::HighlightedText);
+    QIcon playIcon;
+    for (qreal dpr : { 1.0, 2.0 }) {
+        QPixmap padded(qRound((PlayIconSize + PlayIconGap) * dpr), qRound(PlayIconSize * dpr));
+        padded.setDevicePixelRatio(dpr);
+        padded.fill(Qt::transparent);
+        QPainter painter(&padded);
+        painter.drawPixmap(0, 0, ReprismIcons::pixmap(running ? "square" : "play", glyphColor, PlayIconSize, dpr, true));
+        painter.end();
+        playIcon.addPixmap(padded);
+    }
+    m_playButton->setIcon(playIcon);
     m_launchMenuButton->setIcon(ReprismIcons::icon("chevron-down", pal.color(QPalette::HighlightedText)));
     m_editButton->setIcon(ReprismIcons::icon("pencil", pal.color(QPalette::ButtonText)));
     m_folderButton->setIcon(ReprismIcons::icon("folder-open", pal.color(QPalette::ButtonText)));

@@ -18,6 +18,7 @@ ReprismTheme::ReprismTheme(bool dark) : m_dark(dark)
             { "selected", QColor(0x3c, 0x3c, 0x3c) }, { "scroll", QColor(0x3d, 0x3d, 0x3d) },
             { "scrollHover", QColor(0x56, 0x56, 0x56) },   { "link", QColor(0xf4, 0xf4, 0xf4) },
             { "focus", QColor(0x8c, 0x8c, 0x8c) },          { "progress", QColor(0x70, 0x70, 0x70) },
+            { "accentDivider", QColor(0x00, 0x00, 0x00, 0x30) },
         };
     } else {
         m_tokens = {
@@ -31,6 +32,7 @@ ReprismTheme::ReprismTheme(bool dark) : m_dark(dark)
             { "selected", QColor(0xdc, 0xdc, 0xdc) }, { "scroll", QColor(0xc8, 0xc8, 0xc8) },
             { "scrollHover", QColor(0xab, 0xab, 0xab) },   { "link", QColor(0x00, 0x00, 0x00) },
             { "focus", QColor(0x6e, 0x6e, 0x6e) },          { "progress", QColor(0xa8, 0xa8, 0xa8) },
+            { "accentDivider", QColor(0xff, 0xff, 0xff, 0x40) },
         };
     }
 }
