@@ -818,6 +818,8 @@ SET(LAUNCHER_SOURCES
     ui/GuiUtil.cpp
     ui/ToolTipFilter.h
     ui/ToolTipFilter.cpp
+    ui/reprism/DevScreenshot.h
+    ui/reprism/DevScreenshot.cpp
     ui/MultiDecorationItemDelegate.h
     ui/MultiDecorationItemDelegate.cpp
 
@@ -851,6 +853,8 @@ SET(LAUNCHER_SOURCES
     ui/themes/CustomTheme.cpp
     ui/themes/CustomTheme.h
     ui/themes/DarkTheme.cpp
+    ui/themes/ReprismTheme.cpp
+    ui/themes/ReprismTheme.h
     ui/themes/DarkTheme.h
     ui/themes/ITheme.cpp
     ui/themes/ITheme.h
@@ -1203,6 +1207,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/flat_white/flat_white.qrc
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
+    resources/reprism/reprism.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 

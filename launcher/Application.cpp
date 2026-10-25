@@ -51,6 +51,7 @@
 #include "ui/InstanceWindow.h"
 #include "ui/MainWindow.h"
 #include "ui/ToolTipFilter.h"
+#include "ui/reprism/DevScreenshot.h"
 #include "ui/ViewLogWindow.h"
 
 #include "ui/dialogs/ProgressDialog.h"
@@ -1232,6 +1233,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         installEventFilter(new ToolTipFilter);
     }
 
+    DevScreenshot::install();
+
     // the setup wizard applies the selected theme itself before it is shown
     if (!createSetupWizard()) {
         m_themeManager->applyCurrentlySelectedTheme(true);
@@ -1282,13 +1285,7 @@ bool Application::createSetupWizard()
             settings()->set("IconTheme", defaultIconTheme);
         }
         if (!validWidgets) {
-#if defined(Q_OS_LINUX)
-            const QString style = "system";
-#else
-            const QString style = darkMode ? QStringLiteral("dark") : QStringLiteral("bright");
-
-#endif
-
+            const QString style = darkMode ? QStringLiteral("reprism_dark") : QStringLiteral("reprism_light");
             settings()->set("ApplicationTheme", style);
         }
 

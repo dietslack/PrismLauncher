@@ -1,0 +1,16 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/reprism">
+        <file>reprism.qss</file>
+        <file>dark/check.svg</file>
+        <file>dark/partial.svg</file>
+        <file>dark/chevron-down.svg</file>
+        <file>dark/chevron-up.svg</file>
+        <file>dark/chevron-right.svg</file>
+        <file>light/check.svg</file>
+        <file>light/partial.svg</file>
+        <file>light/chevron-down.svg</file>
+        <file>light/chevron-up.svg</file>
+        <file>light/chevron-right.svg</file>
+    </qresource>
+</RCC>
