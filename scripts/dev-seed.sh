@@ -28,8 +28,8 @@ cat > "$DIR/accounts.json" <<'EOF'
 EOF
 
 now=$(($(date +%s) * 1000))
-make_instance() {  # id name icon mcver [loaderUid loaderVer] lastLaunchAgoHours playedSeconds
-    local id="$1" name="$2" icon="$3" mc="$4" luid="$5" lver="$6" ago="$7" played="$8"
+make_instance() {  # id name icon mcver [loaderUid loaderVer] lastLaunchAgoHours playedSeconds [packType packId]
+    local id="$1" name="$2" icon="$3" mc="$4" luid="$5" lver="$6" ago="$7" played="$8" ptype="${9:-}" pid="${10:-}"
     mkdir -p "$DIR/instances/$id/minecraft"
     cat > "$DIR/instances/$id/instance.cfg" <<EOF
 [General]
@@ -39,6 +39,9 @@ iconKey=$icon
 lastLaunchTime=$((now - ago * 3600000))
 totalTimePlayed=$played
 EOF
+    if [ -n "$ptype" ]; then
+        printf 'ManagedPack=true\nManagedPackType=%s\nManagedPackID=%s\nManagedPackName=%s\n' "$ptype" "$pid" "$name" >> "$DIR/instances/$id/instance.cfg"
+    fi
     local loader=""
     [ -n "$luid" ] && loader=", {\"uid\": \"$luid\", \"version\": \"$lver\"}"
     cat > "$DIR/instances/$id/mmc-pack.json" <<EOF
@@ -47,8 +50,8 @@ EOF
 }
 
 make_instance survival   "Survival World"     grass      1.21.4 net.fabricmc.fabric-loader 0.16.9 2    360000
-make_instance create     "Create: Above & Beyond" gear   1.20.1 net.minecraftforge 47.3.0       72   1250000
-make_instance skyblock   "Skyblock"           netherstar 1.20.1 net.neoforged 20.4.237          240  50000
+make_instance create     "Fabulously Optimized" gear     1.21.4 net.fabricmc.fabric-loader 0.16.9 72 1250000 modrinth 1KVo5zza
+make_instance skyblock   "RLCraft"            netherstar 1.12.2 net.minecraftforge 14.23.5.2860 240 50000 flame 285109
 make_instance vanilla    "Vanilla 1.8.9"      steve      1.8.9  "" ""                          2000 9000
 make_instance quilt      "Quilt Test"         quiltmc    1.21.1 org.quiltmc.quilt-loader 0.27.1 500  600
 make_instance creative   "Creative Builds"    diamond    1.21.4 "" ""                          30   80000

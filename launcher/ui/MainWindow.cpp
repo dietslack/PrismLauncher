@@ -111,6 +111,7 @@
 #include "ui/reprism/InstanceCardDelegate.h"
 #include "ui/reprism/InstanceDetailsPanel.h"
 #include "ui/reprism/InstanceSummary.h"
+#include "ui/reprism/ModpackAuthors.h"
 #include "ui/reprism/NavRail.h"
 #include "ui/reprism/ReprismIcons.h"
 #include "ui/themes/ITheme.h"
@@ -314,7 +315,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view = new InstanceView(ui->centralWidget);
 
         view->setSelectionMode(QAbstractItemView::SingleSelection);
-        auto delegate = new InstanceCardDelegate(this);
+        auto delegate = new InstanceCardDelegate(view);
         view->setItemDelegate(delegate);
         view->setFrameShape(QFrame::NoFrame);
         // do not show ugly blue border on the mac
@@ -1955,6 +1956,11 @@ void MainWindow::setupReprismShell()
     connect(instances, &QAbstractItemModel::rowsInserted, this, &MainWindow::refreshRecentInstances);
     connect(instances, &QAbstractItemModel::rowsRemoved, this, &MainWindow::refreshRecentInstances);
     connect(instances, &QAbstractItemModel::modelReset, this, &MainWindow::refreshRecentInstances);
+    connect(ModpackAuthors::instance(), &ModpackAuthors::resolved, this, [this](const QString& id) {
+        view->viewport()->update();
+        if (m_selectedInstance && m_selectedInstance->id() == id)
+            m_details->setInstance(m_selectedInstance);
+    });
     refreshRecentInstances();
 
     if (m_selectedInstance)

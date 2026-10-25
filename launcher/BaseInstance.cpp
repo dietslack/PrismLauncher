@@ -131,6 +131,7 @@ BaseInstance::BaseInstance(SettingsObject* globalSettings, std::unique_ptr<Setti
     m_settings->registerSetting("ManagedPackVersionID", "");
     m_settings->registerSetting("ManagedPackVersionName", "");
     m_settings->registerSetting("ManagedPackURL", "");
+    m_settings->registerSetting("ManagedPackAuthor", "");  // RePrism: cached creator name, see ModpackAuthors
 
     m_settings->registerSetting("Profiler", "");
 }

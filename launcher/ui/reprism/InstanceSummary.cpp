@@ -13,6 +13,7 @@
 #include "MMCTime.h"
 #include "minecraft/MinecraftInstance.h"
 #include "settings/SettingsObject.h"
+#include "ui/reprism/ModpackAuthors.h"
 
 namespace InstanceSummary {
 
@@ -85,6 +86,12 @@ QString lastPlayedLine(MinecraftInstance* instance)
     if (seconds < 86400 * 365)
         return ago(seconds / (86400 * 30), QT_TRANSLATE_NOOP("InstanceSummary", "Played a month ago"), QT_TRANSLATE_NOOP("InstanceSummary", "Played %1 months ago"));
     return ago(seconds / (86400 * 365), QT_TRANSLATE_NOOP("InstanceSummary", "Played a year ago"), QT_TRANSLATE_NOOP("InstanceSummary", "Played %1 years ago"));
+}
+
+QString creatorLine(MinecraftInstance* instance)
+{
+    const QString author = ModpackAuthors::instance()->author(instance);
+    return author.isEmpty() ? QString() : Strings::tr("by %1").arg(author);
 }
 
 QString playtimeLine(MinecraftInstance* instance)

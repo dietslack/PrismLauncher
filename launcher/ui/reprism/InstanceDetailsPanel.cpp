@@ -64,6 +64,7 @@ InstanceDetailsPanel::InstanceDetailsPanel(const Actions& actions, QWidget* icon
         return label;
     };
     m_versionLabel = makeFact();
+    m_creatorLabel = makeFact();
     m_lastPlayedLabel = makeFact();
     m_playtimeLabel = makeFact();
     layout->addSpacing(16);
@@ -135,6 +136,9 @@ void InstanceDetailsPanel::setInstance(MinecraftInstance* instance)
     if (!instance)
         return;
     m_versionLabel->setText(InstanceSummary::versionLine(instance));
+    const QString creator = InstanceSummary::creatorLine(instance);
+    m_creatorLabel->setText(creator);
+    m_creatorLabel->setVisible(!creator.isEmpty());
     m_lastPlayedLabel->setText(InstanceSummary::lastPlayedLine(instance));
     const QString playtime = InstanceSummary::playtimeLine(instance);
     m_playtimeLabel->setText(playtime);

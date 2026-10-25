@@ -11,6 +11,8 @@ namespace InstanceSummary {
 QString versionLine(MinecraftInstance* instance);
 /// e.g. "Played 3 hours ago", or "Never played".
 QString lastPlayedLine(MinecraftInstance* instance);
+/// e.g. "by Shivaxi" for modpacks with a known creator, otherwise an empty string.
+QString creatorLine(MinecraftInstance* instance);
 /// e.g. "42h 10m played", or an empty string when never played.
 QString playtimeLine(MinecraftInstance* instance);
 /// Forget cached facts, e.g. after an instance's components changed.

@@ -36,6 +36,7 @@ class InstanceDetailsPanel : public QFrame {
     MinecraftInstance* m_instance = nullptr;
     QStackedLayout* m_stack;
     QLabel* m_versionLabel;
+    QLabel* m_creatorLabel;
     QLabel* m_lastPlayedLabel;
     QLabel* m_playtimeLabel;
     QPushButton* m_playButton;
