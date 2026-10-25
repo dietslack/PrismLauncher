@@ -170,7 +170,7 @@ QPushButton:pressed {
 }
 
 QPushButton:checked {
-    background-color: @accentSoft@;
+    background-color: @selected@;
     border-color: @accent@;
 }
 
@@ -485,7 +485,7 @@ QAbstractItemView {
     alternate-background-color: @surfaceAlt@;
     border: 1px solid @border@;
     border-radius: 10px;
-    selection-background-color: @accentSoft@;
+    selection-background-color: @selected@;
     selection-color: @text@;
     outline: none;
 }
@@ -503,7 +503,7 @@ QAbstractItemView::item:hover {
 }
 
 QAbstractItemView::item:selected {
-    background-color: @accentSoft@;
+    background-color: @selected@;
     color: @text@;
 }
 
@@ -654,7 +654,7 @@ QSplitter::handle {
 }
 
 QSplitter::handle:hover {
-    background: @accentSoft@;
+    background: @selected@;
 }
 
 /* ---------- Misc ---------- */
