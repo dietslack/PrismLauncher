@@ -84,6 +84,10 @@ class InstanceView : public QAbstractItemView {
     void setCardLayout(int minItemWidth, int spacing);
     int itemWidth() const;
     QModelIndex hoveredIndex() const { return m_hoverIndex; }
+    /// Last mouse position over the viewport while hovering a card (viewport coordinates).
+    QPoint hoverPosition() const { return m_hoverPos; }
+    /// Clickable area within a card (e.g. its play button); shows a pointing-hand cursor over it.
+    void setCardHotspot(std::function<QRect(const QRect& itemRect)> hotspot) { m_cardHotspot = std::move(hotspot); }
 
    public slots:
     virtual void updateGeometries() override;
@@ -134,6 +138,8 @@ class InstanceView : public QAbstractItemView {
     int m_itemWidth = 100;
     bool m_stretchItems = false;
     QPersistentModelIndex m_hoverIndex;
+    QPoint m_hoverPos{ -1, -1 };
+    std::function<QRect(const QRect&)> m_cardHotspot;
     int m_currentItemsPerRow = -1;
     int m_currentCursorColumn = -1;
     mutable QCache<int, QRect> m_geometryCache;

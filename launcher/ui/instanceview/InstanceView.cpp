@@ -278,6 +278,8 @@ void InstanceView::setCardLayout(int minItemWidth, int spacing)
 
 void InstanceView::leaveEvent(QEvent* event)
 {
+    m_hoverPos = QPoint(-1, -1);
+    viewport()->unsetCursor();
     if (m_hoverIndex.isValid()) {
         m_hoverIndex = QPersistentModelIndex();
         viewport()->update();
@@ -337,10 +339,19 @@ void InstanceView::mouseMoveEvent(QMouseEvent* event)
 
     if (m_stretchItems) {
         QPersistentModelIndex hovered = indexAt(event->pos());
+        m_hoverPos = event->pos();
         if (hovered != m_hoverIndex) {
             m_hoverIndex = hovered;
             viewport()->update();
+        } else if (hovered.isValid()) {
+            // the card may highlight parts of itself (e.g. its play button) under the cursor
+            viewport()->update(visualRect(hovered));
         }
+        const bool overHotspot = hovered.isValid() && m_cardHotspot && m_cardHotspot(visualRect(hovered)).contains(event->pos());
+        if (overHotspot)
+            viewport()->setCursor(Qt::PointingHandCursor);
+        else
+            viewport()->unsetCursor();
     }
 
     QPoint topLeft;

@@ -250,9 +250,23 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     if (progress > 0) {
         const bool running = instance && instance->isRunning();
         const QRect play = playRectFor(card, progress);
+        auto* instanceView = qobject_cast<InstanceView*>(m_view);
+        const bool playHovered = progress >= 1.0 && instanceView && play.contains(instanceView->hoverPosition());
         painter->setOpacity(progress);
         painter->setPen(Qt::NoPen);
-        painter->setBrush(running ? pal.color(QPalette::Mid) : pal.color(QPalette::Highlight));
+        QColor fill = running ? pal.color(QPalette::Mid) : pal.color(QPalette::Highlight);
+        if (playHovered) {
+            // Clear hover feedback: a soft ring around the button and a lighter (dark theme) / darker (light theme) fill.
+            QColor ring = fill;
+            ring.setAlphaF(0.35);
+            painter->setBrush(ring);
+            painter->drawRoundedRect(QRectF(play).adjusted(-3, -3, 3, 3), 13, 13);
+            const bool darkTheme = pal.color(QPalette::Window).lightnessF() < 0.5;
+            fill = darkTheme ? fill.lighter(running ? 140 : 108) : fill.lighter(running ? 90 : 190);
+            if (!running && darkTheme)
+                fill = Qt::white;
+        }
+        painter->setBrush(fill);
         painter->drawRoundedRect(play, 10, 10);
         const QColor fg = running ? text : pal.color(QPalette::HighlightedText);
         const QString label = running ? tr("Stop") : tr("Play");

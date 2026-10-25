@@ -335,6 +335,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setModel(proxymodel);
         view->setObjectName(QStringLiteral("reprismInstanceView"));
         view->setCardLayout(InstanceCardDelegate::MinimumWidth, 12);
+        view->setCardHotspot(&InstanceCardDelegate::playButtonRect);
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
