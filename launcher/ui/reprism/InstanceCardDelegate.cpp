@@ -174,7 +174,6 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     auto* instance = static_cast<MinecraftInstance*>(index.data(InstanceList::InstancePointerRole).value<void*>());
     // Use the application palette: the view itself is styled transparent, which blanks its own palette.
     const QPalette pal = QApplication::palette();
-    const bool selected = option.state & QStyle::State_Selected;
     const qreal progress = hoverProgress(index, option.state & QStyle::State_MouseOver);
     const QRect card = option.rect;
     const qreal dpr = painter->device()->devicePixelRatioF();
@@ -316,12 +315,7 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         painter->setOpacity(1.0);
     }
 
-    painter->setClipping(false);
-    if (selected) {
-        painter->setPen(QPen(pal.color(QPalette::Highlight), 1.5));
-        painter->setBrush(Qt::NoBrush);
-        painter->drawRoundedRect(QRectF(card).adjusted(1, 1, -1, -1), CardRadius, CardRadius);
-    }
+    // No selection outline: clicking a card opens its page, so "selected" isn't a state worth showing here.
     painter->restore();
 }
 
