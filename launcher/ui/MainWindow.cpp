@@ -1856,6 +1856,8 @@ void MainWindow::setupReprismShell()
         removeToolBar(toolBar);
         toolBar->hide();
         ui->viewMenu->removeAction(toolBar->toggleViewAction());
+        // restoreState() re-adds toolbars by object name; clear it so saved layouts can't bring them back.
+        toolBar->setObjectName(QString());
     }
     statusBar()->hide();
     ui->actionToggleStatusBar->setVisible(false);
