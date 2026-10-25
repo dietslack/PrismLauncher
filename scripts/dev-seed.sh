@@ -16,6 +16,7 @@ IconTheme=$ICONS
 AutomaticJavaDownload=true
 UserAskedAboutAutomaticJavaDownload=true
 IgnoreJavaWizard=true
+SelectedInstance=survival
 EOF
 
 # A fake account so the login wizard page is skipped. It cannot actually log in.

@@ -171,7 +171,7 @@ QPushButton:pressed {
 
 QPushButton:checked {
     background-color: @selected@;
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 QPushButton:default {
@@ -218,7 +218,7 @@ QCommandLinkButton {
 
 QCommandLinkButton:hover {
     background-color: @surface2@;
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 /* ---------- Inputs ---------- */
@@ -242,7 +242,7 @@ QLineEdit:hover, QTextEdit:hover, QPlainTextEdit:hover, QAbstractSpinBox:hover {
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QAbstractSpinBox:focus {
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QAbstractSpinBox:disabled {
@@ -269,7 +269,7 @@ EditableLabel QTextEdit:hover {
 
 EditableLabel QTextEdit:focus {
     background-color: @input@;
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 QLineEdit:read-only {
@@ -331,7 +331,7 @@ QComboBox:hover {
 }
 
 QComboBox:focus, QComboBox:on {
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 QComboBox:disabled {
@@ -390,7 +390,7 @@ QRadioButton::indicator {
 }
 
 QCheckBox::indicator:hover, QRadioButton::indicator:hover, QGroupBox::indicator:hover {
-    border-color: @accent@;
+    border-color: @focus@;
 }
 
 QCheckBox::indicator:checked, QGroupBox::indicator:checked {
@@ -625,7 +625,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: @accent@;
+    background-color: @progress@;
     border-radius: 6px;
 }
 
@@ -665,4 +665,137 @@ QLabel:disabled {
 
 QWizard {
     background-color: @window@;
+}
+
+/* ---------- RePrism shell (navigation rail, library, details panel) ---------- */
+
+QToolButton[hideMenuIndicator="true"]::menu-indicator {
+    image: none;
+    width: 0px;
+}
+
+#reprismNavRail {
+    background-color: @window@;
+    border: none;
+}
+
+#reprismNavSeparator {
+    background-color: @border@;
+    border: none;
+}
+
+QToolButton#reprismNavButton, QToolButton#reprismNavInstance {
+    border: none;
+    border-radius: 12px;
+    padding: 0px;
+}
+
+QToolButton#reprismNavButton:hover, QToolButton#reprismNavInstance:hover {
+    background-color: @surface2@;
+}
+
+QToolButton#reprismNavButton:checked, QToolButton#reprismNavButton:pressed {
+    background-color: @surface3@;
+}
+
+#reprismContent {
+    background-color: @surface@;
+    border-top: 1px solid @border@;
+    border-left: 1px solid @border@;
+    border-top-left-radius: 16px;
+}
+
+#reprismContent QLabel {
+    background: transparent;
+}
+
+QAbstractItemView#reprismInstanceView {
+    background: transparent;
+    border: none;
+}
+
+#reprismMuted {
+    color: @muted@;
+}
+
+QLineEdit#reprismSearch {
+    background-color: @surface2@;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 7px 10px;
+}
+
+QLineEdit#reprismSearch:hover {
+    border-color: @borderStrong@;
+}
+
+QLineEdit#reprismSearch:focus {
+    border-color: @focus@;
+}
+
+QPushButton#reprismPrimaryButton, QPushButton#reprismPlayButton, QToolButton#reprismPlayMenuButton {
+    color: @accentText@;
+    background-color: @accent@;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-weight: 600;
+}
+
+QToolButton#reprismPlayMenuButton {
+    padding: 0px;
+}
+
+QPushButton#reprismPrimaryButton:hover, QPushButton#reprismPlayButton:hover, QToolButton#reprismPlayMenuButton:hover {
+    background-color: @accentHover@;
+}
+
+QPushButton#reprismPrimaryButton:pressed, QPushButton#reprismPlayButton:pressed, QToolButton#reprismPlayMenuButton:pressed {
+    background-color: @accentPressed@;
+}
+
+QPushButton#reprismPlayButton:disabled, QToolButton#reprismPlayMenuButton:disabled {
+    color: @muted@;
+    background-color: @surface3@;
+}
+
+QPushButton#reprismPlayButton[running="true"] {
+    color: @text@;
+    background-color: @surface3@;
+    border: 1px solid @borderStrong@;
+}
+
+#reprismDetails {
+    background-color: @surface2@;
+    border: none;
+    border-radius: 16px;
+}
+
+QToolButton#reprismDetailsIcon {
+    background-color: @surface@;
+    border: none;
+    border-radius: 20px;
+}
+
+QToolButton#reprismDetailsIcon:hover {
+    background-color: @surface3@;
+}
+
+QToolButton#reprismSecondaryButton {
+    background-color: @surface3@;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+QToolButton#reprismSecondaryButton:hover {
+    border-color: @borderStrong@;
+}
+
+#reprismDetails EditableLabel QTextEdit:disabled {
+    color: @text@;
+}
+
+#reprismDetailsName QTextEdit {
+    font-size: 14pt;
+    font-weight: 700;
 }

@@ -80,6 +80,11 @@ class InstanceView : public QAbstractItemView {
     int spacing() const { return m_spacing; };
     void setPaintCat(bool visible);
 
+    /// RePrism: lay items out as cards at least minItemWidth wide, stretched to fill each row.
+    void setCardLayout(int minItemWidth, int spacing);
+    int itemWidth() const;
+    QModelIndex hoveredIndex() const { return m_hoverIndex; }
+
    public slots:
     virtual void updateGeometries() override;
 
@@ -101,6 +106,7 @@ class InstanceView : public QAbstractItemView {
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
@@ -126,6 +132,8 @@ class InstanceView : public QAbstractItemView {
     int m_categoryMargin = 5;
     int m_spacing = 5;
     int m_itemWidth = 100;
+    bool m_stretchItems = false;
+    QPersistentModelIndex m_hoverIndex;
     int m_currentItemsPerRow = -1;
     int m_currentCursorColumn = -1;
     mutable QCache<int, QRect> m_geometryCache;
@@ -147,7 +155,6 @@ class InstanceView : public QAbstractItemView {
     int contentWidth() const;
 
    private: /* methods */
-    int itemWidth() const;
     int calculateItemsPerRow() const;
     int verticalScrollToValue(const QModelIndex& index, const QRect& rect, QListView::ScrollHint hint) const;
     QPixmap renderToPixmap(const QModelIndexList& indices, QRect* r) const;

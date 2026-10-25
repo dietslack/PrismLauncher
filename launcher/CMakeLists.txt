@@ -822,6 +822,16 @@ SET(LAUNCHER_SOURCES
     ui/ToolTipFilter.cpp
     ui/reprism/DevScreenshot.h
     ui/reprism/DevScreenshot.cpp
+    ui/reprism/ReprismIcons.h
+    ui/reprism/ReprismIcons.cpp
+    ui/reprism/InstanceSummary.h
+    ui/reprism/InstanceSummary.cpp
+    ui/reprism/InstanceCardDelegate.h
+    ui/reprism/InstanceCardDelegate.cpp
+    ui/reprism/NavRail.h
+    ui/reprism/NavRail.cpp
+    ui/reprism/InstanceDetailsPanel.h
+    ui/reprism/InstanceDetailsPanel.cpp
     ui/MultiDecorationItemDelegate.h
     ui/MultiDecorationItemDelegate.cpp
 

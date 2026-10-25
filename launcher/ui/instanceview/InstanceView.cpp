@@ -247,7 +247,7 @@ QString InstanceView::groupNameAt(const QPoint& point)
 
 int InstanceView::calculateItemsPerRow() const
 {
-    return qFloor((qreal)(contentWidth()) / (qreal)(itemWidth() + m_spacing));
+    return qMax(1, qFloor((qreal)(contentWidth()) / (qreal)(m_itemWidth + m_spacing)));
 }
 
 int InstanceView::contentWidth() const
@@ -257,7 +257,32 @@ int InstanceView::contentWidth() const
 
 int InstanceView::itemWidth() const
 {
+    if (m_stretchItems) {
+        const int perRow = qMax(1, m_currentItemsPerRow);
+        return qMax(m_itemWidth, (viewport()->width() - m_spacing * (perRow + 1)) / perRow);
+    }
     return m_itemWidth;
+}
+
+void InstanceView::setCardLayout(int minItemWidth, int spacing)
+{
+    m_itemWidth = minItemWidth;
+    m_spacing = spacing;
+    m_leftMargin = spacing;
+    m_rightMargin = spacing;
+    m_stretchItems = true;
+    viewport()->setMouseTracking(true);
+    m_currentItemsPerRow = calculateItemsPerRow();
+    updateGeometries();
+}
+
+void InstanceView::leaveEvent(QEvent* event)
+{
+    if (m_hoverIndex.isValid()) {
+        m_hoverIndex = QPersistentModelIndex();
+        viewport()->update();
+    }
+    QAbstractItemView::leaveEvent(event);
 }
 
 void InstanceView::mousePressEvent(QMouseEvent* event)
@@ -309,6 +334,14 @@ void InstanceView::mousePressEvent(QMouseEvent* event)
 void InstanceView::mouseMoveEvent(QMouseEvent* event)
 {
     executeDelayedItemsLayout();
+
+    if (m_stretchItems) {
+        QPersistentModelIndex hovered = indexAt(event->pos());
+        if (hovered != m_hoverIndex) {
+            m_hoverIndex = hovered;
+            viewport()->update();
+        }
+    }
 
     QPoint topLeft;
     QPoint visualPos = event->pos();
@@ -527,6 +560,11 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
             option.state &= ~QStyle::State_Selected;
         }
         option.state |= (index == currentIndex()) ? QStyle::State_HasFocus : QStyle::State_None;
+        if (index == m_hoverIndex) {
+            option.state |= QStyle::State_MouseOver;
+        } else {
+            option.state &= ~QStyle::State_MouseOver;
+        }
         if (!(flags & Qt::ItemIsEnabled)) {
             option.state &= ~QStyle::State_Enabled;
         }
@@ -567,6 +605,11 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
 void InstanceView::resizeEvent([[maybe_unused]] QResizeEvent* event)
 {
+    if (m_stretchItems) {
+        // card widths depend on the viewport width
+        m_geometryCache.clear();
+        viewport()->update();
+    }
     int newItemsPerRow = calculateItemsPerRow();
     if (newItemsPerRow != m_currentItemsPerRow) {
         m_currentCursorColumn = -1;
@@ -713,6 +756,9 @@ QRect InstanceView::geometryRect(const QModelIndex& index) const
     out.setTop(cat->verticalPosition() + cat->headerHeight() + 5 + cat->rowTopOf(index));
     out.setLeft(m_spacing + x * (itemWidth() + m_spacing));
     out.setSize(itemDelegate()->sizeHint(option, index));
+    if (m_stretchItems) {
+        out.setWidth(itemWidth());
+    }
     m_geometryCache.insert(row, new QRect(out));
     return out;
 }

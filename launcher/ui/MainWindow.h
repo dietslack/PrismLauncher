@@ -63,6 +63,9 @@ class InstanceTask;
 namespace Ui {
 class MainWindow;
 }
+class NavRail;
+class InstanceDetailsPanel;
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -234,8 +237,17 @@ class MainWindow : public QMainWindow {
 
     void handleInstanceRename(const QString& before, const QString& after);
 
+    // RePrism: Modrinth-style shell (navigation rail, library header, details panel)
+    void setupReprismShell();
+    void refreshRecentInstances();
+
    private:
     Ui::MainWindow* ui;
+    NavRail* m_navRail = nullptr;
+    InstanceDetailsPanel* m_details = nullptr;
+    QLineEdit* m_searchEdit = nullptr;
+    QAction* m_searchAction = nullptr;
+    QPushButton* m_newInstanceButton = nullptr;
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
     InstanceProxyModel* proxymodel = nullptr;

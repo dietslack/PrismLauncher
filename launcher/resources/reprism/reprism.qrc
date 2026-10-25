@@ -12,5 +12,24 @@
         <file>light/chevron-down.svg</file>
         <file>light/chevron-up.svg</file>
         <file>light/chevron-right.svg</file>
+        <file>icons/chevron-down.svg</file>
+        <file>icons/circle-help.svg</file>
+        <file>icons/clock.svg</file>
+        <file>icons/copy.svg</file>
+        <file>icons/ellipsis.svg</file>
+        <file>icons/external-link.svg</file>
+        <file>icons/folder-open.svg</file>
+        <file>icons/hourglass.svg</file>
+        <file>icons/library.svg</file>
+        <file>icons/pencil.svg</file>
+        <file>icons/play.svg</file>
+        <file>icons/plus.svg</file>
+        <file>icons/search.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/share.svg</file>
+        <file>icons/square.svg</file>
+        <file>icons/tag.svg</file>
+        <file>icons/trash-2.svg</file>
+        <file>icons/user-round.svg</file>
     </qresource>
 </RCC>

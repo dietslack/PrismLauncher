@@ -3,7 +3,10 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QAbstractScrollArea>
 #include <QDir>
+#include <QLineEdit>
+#include <QMouseEvent>
 #include <QTimer>
 #include <QWidget>
 #include <QAbstractButton>
@@ -33,6 +36,43 @@ void install()
     int delay = qEnvironmentVariableIntValue("REPRISM_SCREENSHOT_DELAY", &ok);
     if (!ok)
         delay = 3000;
+
+    const QString size = qEnvironmentVariable("REPRISM_SCREENSHOT_SIZE");  // e.g. "1200x760"
+    if (const auto parts = size.split('x'); parts.size() == 2) {
+        QTimer::singleShot(delay / 4, qApp, [w = parts[0].toInt(), h = parts[1].toInt()] {
+            for (auto* window : QApplication::topLevelWidgets())
+                if (window->inherits("QMainWindow"))
+                    window->resize(w, h);
+        });
+    }
+
+    const QString hover = qEnvironmentVariable("REPRISM_SCREENSHOT_HOVER");  // e.g. "reprismInstanceView:200,80"
+    if (const auto target = hover.split(':'); target.size() == 2) {
+        QTimer::singleShot(delay * 3 / 4, qApp, [name = target[0], coords = target[1].split(',')] {
+            for (auto* window : QApplication::topLevelWidgets()) {
+                QWidget* widget = window->findChild<QWidget*>(name);
+                if (!widget || coords.size() != 2)
+                    continue;
+                if (auto* area = qobject_cast<QAbstractScrollArea*>(widget))
+                    widget = area->viewport();
+                const QPointF pos(coords[0].toInt(), coords[1].toInt());
+                QMouseEvent enter(QEvent::Enter, pos, widget->mapToGlobal(pos), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(widget, &enter);
+                QMouseEvent move(QEvent::MouseMove, pos, widget->mapToGlobal(pos), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(widget, &move);
+                return;
+            }
+        });
+    }
+
+    const QString type = qEnvironmentVariable("REPRISM_SCREENSHOT_TYPE");  // e.g. "reprismSearch:sky"
+    if (const int colon = type.indexOf(':'); colon > 0) {
+        QTimer::singleShot(delay / 2, qApp, [name = type.left(colon), text = type.mid(colon + 1)] {
+            for (auto* window : QApplication::topLevelWidgets())
+                if (auto* edit = window->findChild<QLineEdit*>(name))
+                    edit->setText(text);
+        });
+    }
 
     const QString trigger = qEnvironmentVariable("REPRISM_SCREENSHOT_TRIGGER");
     if (!trigger.isEmpty()) {
