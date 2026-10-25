@@ -32,7 +32,7 @@ class ContentModel : public QAbstractTableModel {
    public:
     enum class Type { Mod, ResourcePack, DataPack, Shader };
     enum Column { SelectColumn, NameColumn, VersionColumn, TypeColumn, SourceColumn, ActionsColumn, ColumnCount };
-    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole, EnabledRole, UpdateRole, HasSourceRole };
+    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole, EnabledRole, UpdateRole, HasSourceRole, AuthorRole };
 
     explicit ContentModel(QObject* parent = nullptr);
     void setInstance(MinecraftInstance* instance);

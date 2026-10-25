@@ -195,6 +195,78 @@ class ActionsDelegate : public QStyledItemDelegate {
     Handler m_handler;
 };
 
+/// "Project" column: icon, name, and the author (or file name) underneath.
+class ProjectDelegate : public QStyledItemDelegate {
+   public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+    static constexpr int RowHeight = 56;
+    static constexpr int IconSize = 40;
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex&) const override { return { option.rect.width(), RowHeight }; }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        // Background (hover etc.) the same way the other cells get it.
+        QStyleOptionViewItem panel = option;
+        initStyleOption(&panel, index);
+        panel.text.clear();
+        panel.icon = QIcon();
+        panel.features &= ~QStyleOptionViewItem::HasDecoration;
+        const QWidget* widget = option.widget;
+        (widget ? widget->style() : QApplication::style())->drawPrimitive(QStyle::PE_PanelItemViewItem, &panel, painter, widget);
+
+        const QPalette pal = QApplication::palette();
+        const qreal dpr = painter->device()->devicePixelRatioF();
+        const QRect r = option.rect;
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+
+        // Icon: rounded tile, nearest-neighbour scaled
+        const QRect iconRect(r.left() + 6, r.center().y() - IconSize / 2 + 1, IconSize, IconSize);
+        QPainterPath clip;
+        clip.addRoundedRect(QRectF(iconRect), 8, 8);
+        painter->save();
+        painter->setClipPath(clip);
+        const QVariant decoration = index.data(Qt::DecorationRole);
+        if (decoration.canConvert<QPixmap>() && !decoration.value<QPixmap>().isNull()) {
+            const QImage image = decoration.value<QPixmap>().toImage();
+            const int physical = qRound(IconSize * dpr);
+            QImage scaled = image.scaled(physical, physical, Qt::KeepAspectRatio, Qt::FastTransformation);
+            scaled.setDevicePixelRatio(dpr);
+            const QSizeF logical(scaled.width() / dpr, scaled.height() / dpr);
+            painter->drawImage(QPointF(iconRect.center().x() + 1 - logical.width() / 2, iconRect.center().y() + 1 - logical.height() / 2), scaled);
+        } else {
+            painter->fillRect(iconRect, pal.color(QPalette::Light));
+            const QIcon fallback = decoration.value<QIcon>();
+            fallback.paint(painter, iconRect.adjusted(9, 9, -9, -9));
+        }
+        painter->restore();
+
+        // Name and author
+        const QVariant foreground = index.data(Qt::ForegroundRole);
+        const QColor text = foreground.isValid() ? foreground.value<QColor>() : pal.color(QPalette::Text);
+        const QColor muted = pal.color(QPalette::PlaceholderText);
+        QFont nameFont = option.font;
+        nameFont.setWeight(QFont::DemiBold);
+        const QFontMetrics nameMetrics(nameFont);
+        const QFontMetrics metrics(option.font);
+        const int left = iconRect.right() + 12;
+        const int width = r.right() - left - 8;
+        const int top = r.top() + (r.height() - nameMetrics.height() - metrics.height() - 2) / 2;
+        painter->setFont(nameFont);
+        painter->setPen(text);
+        painter->drawText(QRect(left, top, width, nameMetrics.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                          nameMetrics.elidedText(index.data(Qt::DisplayRole).toString(), Qt::ElideRight, width));
+        const QString author = index.data(ContentModel::AuthorRole).toString();
+        const QString subtitle = author.isEmpty() ? index.data(ContentModel::FileNameRole).toString() : QObject::tr("by %1").arg(author);
+        painter->setFont(option.font);
+        painter->setPen(muted);
+        painter->drawText(QRect(left, top + nameMetrics.height() + 2, width, metrics.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                          metrics.elidedText(subtitle, Qt::ElideRight, width));
+        painter->restore();
+    }
+};
+
 /// Repaints a view's viewport as the mouse moves, so cell buttons can highlight under the cursor.
 class HoverRepaint : public QObject {
    public:
@@ -421,6 +493,11 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
         return m_updates.value(res->fileinfo().absoluteFilePath());
     if (role == HasSourceRole)
         return res->metadata() != nullptr;
+    if (role == AuthorRole) {
+        if (auto* mod = dynamic_cast<Mod*>(res))
+            return mod->authors().join(", ");
+        return QString();
+    }
 
     switch (index.column()) {
         case SelectColumn:
@@ -431,11 +508,12 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
             if (role == Qt::DisplayRole)
                 return res->name();
             if (role == Qt::DecorationRole) {
+                // Original, unscaled image (a 0x0 size means "don't scale"); the delegate scales it with nearest-neighbour.
                 QPixmap image;
                 if (auto* mod = dynamic_cast<Mod*>(res))
-                    image = mod->icon({ 32, 32 }, Qt::KeepAspectRatio);
+                    image = mod->icon(QSize(0, 0));
                 else if (auto* pack = dynamic_cast<DataPack*>(res))
-                    image = pack->image({ 32, 32 }, Qt::KeepAspectRatio);
+                    image = pack->image(QSize(0, 0));
                 if (!image.isNull())
                     return image;
                 static const char* fallback[] = { "package", "image", "database", "sun" };
@@ -485,7 +563,7 @@ QVariant ContentModel::headerData(int section, Qt::Orientation orientation, int 
         return {};
     switch (section) {
         case NameColumn:
-            return tr("Name");
+            return tr("Project");
         case VersionColumn:
             return tr("Version");
         case TypeColumn:
@@ -635,6 +713,7 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     m_view->setIconSize(QSize(28, 28));
     m_view->setContextMenuPolicy(Qt::CustomContextMenu);
     m_view->setItemDelegateForColumn(ContentModel::SelectColumn, new SelectDelegate(m_view));
+    m_view->setItemDelegateForColumn(ContentModel::NameColumn, new ProjectDelegate(m_view));
     m_view->setItemDelegateForColumn(
         ContentModel::ActionsColumn, new ActionsDelegate(m_view, [this](const QModelIndex& index, ActionsDelegate::Action action) {
             const int row = m_proxy->mapToSource(index).row();
@@ -655,6 +734,7 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
         }));
     m_view->viewport()->installEventFilter(new HoverRepaint(m_view));
     header->setSortIndicatorShown(false);
+    header->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);  // line up with the cell contents
     header->setSectionsClickable(true);  // setSortingEnabled(false) turned this off; the select-all box needs it
     header->setStretchLastSection(false);
     header->setMinimumSectionSize(36);

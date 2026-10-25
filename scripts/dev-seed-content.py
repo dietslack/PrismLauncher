@@ -28,12 +28,12 @@ def write_zip(path, files):
             z.writestr(name, data)
 
 
-mods = [("sodium", "Sodium", "0.6.5", (90, 160, 230)), ("lithium", "Lithium", "0.14.3", (120, 200, 120)),
-        ("iris", "Iris Shaders", "1.8.1", (200, 120, 220)), ("modmenu", "Mod Menu", "13.0.2", (230, 180, 60)),
-        ("fabric-api", "Fabric API", "0.110.5", (210, 190, 150))]
-for mod_id, name, version, color in mods:
+mods = [("sodium", "Sodium", "0.6.5", (90, 160, 230), ["JellySquid"]), ("lithium", "Lithium", "0.14.3", (120, 200, 120), ["CaffeineMC"]),
+        ("iris", "Iris Shaders", "1.8.1", (200, 120, 220), ["coderbot", "IMS"]), ("modmenu", "Mod Menu", "13.0.2", (230, 180, 60), ["Prospector"]),
+        ("fabric-api", "Fabric API", "0.110.5", (210, 190, 150), ["FabricMC"])]
+for mod_id, name, version, color, authors in mods:
     meta = {"schemaVersion": 1, "id": mod_id, "name": name, "version": version, "icon": "icon.png",
-            "authors": ["Someone"], "description": f"{name} for testing."}
+            "authors": authors, "description": f"{name} for testing."}
     write_zip(f"{game}/mods/{mod_id}-{version}.jar", {"fabric.mod.json": json.dumps(meta), "icon.png": png(color)})
 os.rename(f"{game}/mods/modmenu-13.0.2.jar", f"{game}/mods/modmenu-13.0.2.jar.disabled")
 # staggered "added" dates (days ago) so date sorting is visible
