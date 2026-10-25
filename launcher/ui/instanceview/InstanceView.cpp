@@ -606,9 +606,8 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 void InstanceView::resizeEvent([[maybe_unused]] QResizeEvent* event)
 {
     if (m_stretchItems) {
-        // card widths depend on the viewport width
-        m_geometryCache.clear();
-        viewport()->update();
+        // card widths (and with them, card heights) depend on the viewport width
+        updateGeometries();
     }
     int newItemsPerRow = calculateItemsPerRow();
     if (newItemsPerRow != m_currentItemsPerRow) {

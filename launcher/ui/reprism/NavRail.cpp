@@ -122,7 +122,7 @@ void NavRail::setRecentInstances(const QList<RecentInstance>& instances)
         button->setFixedSize(ButtonSize, ButtonSize);
         button->setIconSize(QSize(32, 32));
         button->setAutoRaise(true);
-        button->setIcon(APPLICATION->icons()->getIcon(instance.iconKey));
+        button->setIcon(ReprismIcons::crispIcon(APPLICATION->icons()->getIcon(instance.iconKey), 32));
         button->setToolTip(instance.name);
         connect(button, &QToolButton::clicked, this, [this, id = instance.id] { emit instanceClicked(id); });
         m_recent->addWidget(button, 0, Qt::AlignHCenter);

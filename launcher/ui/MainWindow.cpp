@@ -1219,7 +1219,7 @@ void MainWindow::on_actionChangeInstIcon_triggered()
         m_selectedInstance->setIconKey(dlg.selectedIconKey);
         auto icon = APPLICATION->icons()->getIcon(dlg.selectedIconKey);
         ui->actionChangeInstIcon->setIcon(icon);
-        m_changeIconButton->setIcon(icon);
+        m_changeIconButton->setIcon(ReprismIcons::crispIcon(icon, m_changeIconButton->iconSize().width()));
     }
 }
 
@@ -1235,7 +1235,7 @@ void MainWindow::updateInstanceToolIcon(QString new_icon)
     m_currentInstIcon = new_icon;
     auto icon = APPLICATION->icons()->getIcon(m_currentInstIcon);
     ui->actionChangeInstIcon->setIcon(icon);
-    m_changeIconButton->setIcon(icon);
+    m_changeIconButton->setIcon(ReprismIcons::crispIcon(icon, m_changeIconButton->iconSize().width()));
 }
 
 void MainWindow::setSelectedInstanceById(const QString& id)

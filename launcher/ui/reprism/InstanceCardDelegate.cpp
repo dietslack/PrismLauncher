@@ -11,11 +11,11 @@
 #include "InstanceList.h"
 #include "icons/IconList.h"
 #include "minecraft/MinecraftInstance.h"
+#include "ui/instanceview/InstanceView.h"
 #include "ui/reprism/InstanceSummary.h"
 #include "ui/reprism/ReprismIcons.h"
 
 namespace {
-constexpr int IconAreaHeight = 150;
 constexpr int Padding = 12;
 constexpr int LineGap = 2;
 constexpr int PlayHeight = 34;
@@ -74,13 +74,15 @@ QColor iconTint(const QString& key, const QIcon& icon)
     return tint;
 }
 
-/// The icon's artwork with any fully transparent margin trimmed off, at its largest native size.
-QImage trimmedIcon(const QString& key, const QIcon& icon)
+/// The icon's artwork with any fully transparent margin trimmed off, rendered for `size` physical pixels.
+QImage trimmedIcon(const QString& key, const QIcon& icon, int size)
 {
     static QHash<QString, QImage> s_cache;
-    if (auto it = s_cache.constFind(key); it != s_cache.constEnd())
+    const QString cacheKey = QString("%1|%2").arg(key).arg(size);
+    if (auto it = s_cache.constFind(cacheKey); it != s_cache.constEnd())
         return *it;
-    const QImage image = icon.pixmap(256, 256).toImage().convertToFormat(QImage::Format_ARGB32);
+    // Vector icons render at the requested size; raster icons come back at their native size.
+    const QImage image = icon.pixmap(size, size).toImage().convertToFormat(QImage::Format_ARGB32);
     int left = image.width(), top = image.height(), right = -1, bottom = -1;
     for (int y = 0; y < image.height(); y++) {
         const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
@@ -94,24 +96,29 @@ QImage trimmedIcon(const QString& key, const QIcon& icon)
         }
     }
     QImage trimmed = right < 0 ? image : image.copy(QRect(QPoint(left, top), QPoint(right, bottom)));
-    s_cache.insert(key, trimmed);
+    s_cache.insert(cacheKey, trimmed);
     return trimmed;
 }
 
-/// Draws `image` scaled to cover `area` (like CSS object-fit: cover), keeping small pixel art crisp.
-void drawCover(QPainter* painter, const QImage& image, const QRect& area)
+/// Draws `image` as large as fits in `area` without cropping, centered, using nearest-neighbour scaling.
+void drawFit(QPainter* painter, const QImage& image, const QRect& area)
 {
     if (image.isNull())
         return;
-    const qreal scale = qMax(qreal(area.width()) / image.width(), qreal(area.height()) / image.height());
+    const qreal scale = qMin(qreal(area.width()) / image.width(), qreal(area.height()) / image.height());
     const QSizeF size(image.width() * scale, image.height() * scale);
     const QRectF target(area.center().x() + 0.5 - size.width() / 2, area.center().y() + 0.5 - size.height() / 2, size.width(), size.height());
     painter->save();
-    painter->setClipRect(area, Qt::IntersectClip);
-    // Small sources are pixel art: scale them with nearest-neighbour so they stay sharp.
-    painter->setRenderHint(QPainter::SmoothPixmapTransform, image.width() * 2 > target.width());
+    painter->setRenderHint(QPainter::SmoothPixmapTransform, false);
     painter->drawImage(target, image);
     painter->restore();
+}
+
+/// The icon area is square: as tall as the card is wide.
+int cardWidth(QAbstractItemView* view)
+{
+    auto* instanceView = qobject_cast<InstanceView*>(view);
+    return instanceView ? instanceView->itemWidth() : InstanceCardDelegate::MinimumWidth;
 }
 
 QRect playRectFor(const QRect& card, qreal progress)
@@ -125,7 +132,8 @@ InstanceCardDelegate::InstanceCardDelegate(QAbstractItemView* view) : ListViewDe
 
 QSize InstanceCardDelegate::sizeHint([[maybe_unused]] const QStyleOptionViewItem& option, [[maybe_unused]] const QModelIndex& index) const
 {
-    return QSize(MinimumWidth, IconAreaHeight + infoHeight());
+    const int width = cardWidth(m_view);
+    return QSize(width, width + infoHeight());
 }
 
 QRect InstanceCardDelegate::playButtonRect(const QRect& itemRect)
@@ -185,7 +193,7 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // Icon area: backdrop tinted from the icon's colors (shows through transparent icons), icon filling the area.
     const QString iconKey = instance ? instance->iconKey() : QStringLiteral("default");
     const QIcon icon = APPLICATION->icons()->getIcon(iconKey);
-    const QRect iconArea(card.left(), card.top(), card.width(), IconAreaHeight + qRound(CardRadius));
+    const QRect iconArea(card.left(), card.top(), card.width(), card.width() + qRound(CardRadius));
     {
         const QColor base = pal.color(QPalette::Window);
         const QColor tint = iconTint(iconKey, icon);
@@ -194,8 +202,9 @@ void InstanceCardDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         gradient.setColorAt(1.0, mix(base, tint, 0.16));
         painter->fillRect(iconArea, gradient);
 
-        // The icon's artwork (transparent margins trimmed) fills the whole icon area, cropped evenly.
-        drawCover(painter, trimmedIcon(iconKey, icon), QRect(card.left(), card.top(), card.width(), IconAreaHeight));
+        // The icon's artwork (transparent margins trimmed) fills the square icon area without cropping.
+        const QRect square(card.left(), card.top(), card.width(), card.width());
+        drawFit(painter, trimmedIcon(iconKey, icon, qRound(square.width() * dpr)), square);
     }
 
     // Info panel, sliding up over the icon as the card is hovered.

@@ -62,4 +62,25 @@ QIcon icon(const QString& name, const QColor& color, bool filled)
     return result;
 }
 
+QImage nearestNeighbor(const QIcon& source, int size, qreal devicePixelRatio)
+{
+    const int physical = qRound(size * devicePixelRatio);
+    // Ask for the target size: vector icons render there directly, raster icons come back at native size.
+    QImage image = source.pixmap(physical, physical).toImage();
+    if (image.isNull())
+        return image;
+    if (image.width() != physical && image.height() != physical)
+        image = image.scaled(physical, physical, Qt::KeepAspectRatio, Qt::FastTransformation);
+    image.setDevicePixelRatio(devicePixelRatio);
+    return image;
+}
+
+QIcon crispIcon(const QIcon& source, int size)
+{
+    QIcon result;
+    for (qreal dpr : { 1.0, 2.0 })
+        result.addPixmap(QPixmap::fromImage(nearestNeighbor(source, size, dpr)));
+    return result;
+}
+
 }  // namespace ReprismIcons
