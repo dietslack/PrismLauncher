@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local development build for RePrism Launcher using Homebrew-provided Qt and deps.
 # Usage: scripts/dev-build.sh [run]
-#   MSA_CLIENT_ID / CURSEFORGE_API_KEY env vars are passed through if set.
+#   MSA_CLIENT_ID / CURSEFORGE_API_KEY env vars override the built-in keys if set.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -9,6 +9,10 @@ BREW="$(brew --prefix)"
 MESA="$(brew --prefix mesa)"
 export JAVA_HOME="$(brew --prefix openjdk@17)"
 export PATH="$JAVA_HOME/bin:$PATH"
+
+KEY_ARGS=()
+[ -n "${MSA_CLIENT_ID:-}" ] && KEY_ARGS+=("-DLauncher_MSA_CLIENT_ID=$MSA_CLIENT_ID")
+[ -n "${CURSEFORGE_API_KEY:-}" ] && KEY_ARGS+=("-DLauncher_CURSEFORGE_API_KEY=$CURSEFORGE_API_KEY")
 
 if [ ! -f build/build.ninja ]; then
     cmake -S . -B build -G Ninja \
@@ -20,8 +24,7 @@ if [ ! -f build/build.ninja ]; then
         -DCMAKE_INSTALL_PREFIX="$PWD/install" \
         -DENABLE_LTO=OFF \
         -DBUILD_TESTING=OFF \
-        -DLauncher_MSA_CLIENT_ID="${MSA_CLIENT_ID:-}" \
-        -DLauncher_CURSEFORGE_API_KEY="${CURSEFORGE_API_KEY:-}"
+        "${KEY_ARGS[@]}"
 fi
 
 cmake --build build -j"$(nproc)"

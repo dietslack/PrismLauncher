@@ -49,8 +49,14 @@
 #include <QSettings>
 #include <QStandardPaths>
 
+// RePrism: upstream Prism's Azure app only allows the prismlauncher:// redirect, so when using its
+// client ID we must fall back to the localhost redirect instead of our own URL scheme.
+static const QString s_upstreamMSAClientID = "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb";
+
 bool isSchemeHandlerRegistered()
 {
+    if (APPLICATION->getMSAClientID() == s_upstreamMSAClientID)
+        return false;
 #ifdef Q_OS_LINUX
     QProcess process;
     process.start("xdg-mime", { "query", "default", "x-scheme-handler/" + BuildConfig.LAUNCHER_APP_BINARY_NAME });
