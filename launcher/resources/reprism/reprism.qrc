@@ -50,5 +50,11 @@
         <file>icons/undo-2.svg</file>
         <file>icons/users.svg</file>
         <file>icons/x.svg</file>
+        <file>icons/arrow-up.svg</file>
+        <file>icons/chevron-left.svg</file>
+        <file>icons/database.svg</file>
+        <file>icons/package.svg</file>
+        <file>icons/sun.svg</file>
+        <file>icons/file.svg</file>
     </qresource>
 </RCC>

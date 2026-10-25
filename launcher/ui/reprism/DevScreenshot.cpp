@@ -111,6 +111,32 @@ void install()
         });
     }
 
+    // "objectName:x,y;objectName:x,y" clicks those points in order, 400 ms apart.
+    const QStringList presses = qEnvironmentVariable("REPRISM_SCREENSHOT_PRESS").split(';', Qt::SkipEmptyParts);
+    for (int i = 0; i < presses.size(); i++) {
+        QTimer::singleShot(delay / 2 + i * 400, qApp, [step = presses[i]] {
+            const auto target = step.split(':');
+            const auto coords = target.value(1).split(',');
+            if (target.size() != 2 || coords.size() != 2)
+                return;
+            for (auto* window : QApplication::topLevelWidgets()) {
+                QWidget* widget = window->findChild<QWidget*>(target[0]);
+                if (!widget || !widget->isVisible())
+                    continue;
+                if (auto* area = qobject_cast<QAbstractScrollArea*>(widget))
+                    widget = area->viewport();
+                const QPointF pos(coords[0].toInt(), coords[1].toInt());
+                const QPointF global = widget->mapToGlobal(pos);
+                QMouseEvent press(QEvent::MouseButtonPress, pos, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(widget, &press);
+                QMouseEvent release(QEvent::MouseButtonRelease, pos, global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(widget, &release);
+                return;
+            }
+            qWarning() << "DevScreenshot: nothing visible named" << target[0];
+        });
+    }
+
     const QString trigger = qEnvironmentVariable("REPRISM_SCREENSHOT_TRIGGER");
     if (!trigger.isEmpty()) {
         QTimer::singleShot(delay / 2, qApp, [trigger] {

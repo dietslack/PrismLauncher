@@ -50,10 +50,16 @@ EditableLabel::EditableLabel(QWidget* parent) : QWidget(parent), m_edit(new QTex
     updatePalette();
 }
 
+void EditableLabel::setTextAlignment(Qt::Alignment alignment)
+{
+    m_alignment = alignment;
+    m_edit->setAlignment(alignment);
+}
+
 void EditableLabel::setText(const QString& text)
 {
     m_edit->setPlainText(text);
-    m_edit->setAlignment(Qt::AlignHCenter);
+    m_edit->setAlignment(m_alignment);
     m_edit->document()->clearUndoRedoStacks();
     autoResize(m_edit);
 }
@@ -88,7 +94,7 @@ bool EditableLabel::eventFilter(QObject* watched, QEvent* event)
             const auto* keyEvent = static_cast<QKeyEvent*>(event);
             if (keyEvent->key() == Qt::Key_Escape) {
                 m_edit->setPlainText(m_oldText);
-                m_edit->setAlignment(Qt::AlignHCenter);
+                m_edit->setAlignment(m_alignment);
                 m_edit->clearFocus();
                 return true;
             }

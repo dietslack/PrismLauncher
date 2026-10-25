@@ -9,5 +9,6 @@ namespace DevScreenshot {
 // REPRISM_SCREENSHOT_HOVER ("objectName:x,y") simulates hovering a widget, and REPRISM_SCREENSHOT_TYPE
 // ("objectName:text") sets the text of a line edit. REPRISM_SCREENSHOT_CONTEXT ("objectName:x,y") opens a
 // context menu and REPRISM_SCREENSHOT_CLICK ("objectName") clicks a button, e.g. to open its menu.
+// REPRISM_SCREENSHOT_PRESS ("objectName:x,y;...") clicks points in order, e.g. a card and then a tab.
 void install();
 }  // namespace DevScreenshot

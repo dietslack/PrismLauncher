@@ -64,7 +64,8 @@ namespace Ui {
 class MainWindow;
 }
 class NavRail;
-class InstanceDetailsPanel;
+class InstancePage;
+class QStackedWidget;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -241,11 +242,15 @@ class MainWindow : public QMainWindow {
     void setupReprismShell();
     void refreshRecentInstances();
     void applyReprismActionIcons();
+    void showLibrary();
+    void openInstancePage(MinecraftInstance* instance);
 
    private:
     Ui::MainWindow* ui;
     NavRail* m_navRail = nullptr;
-    InstanceDetailsPanel* m_details = nullptr;
+    InstancePage* m_instancePage = nullptr;
+    QStackedWidget* m_pages = nullptr;
+    QToolButton* m_libraryButton = nullptr;
     QLineEdit* m_searchEdit = nullptr;
     QAction* m_searchAction = nullptr;
     QPushButton* m_newInstanceButton = nullptr;

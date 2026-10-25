@@ -61,4 +61,5 @@ cat > "$DIR/instgroups.json" <<'EOF'
   "Modpacks": {"hidden": false, "instances": ["create", "skyblock"]},
   "Testing": {"hidden": false, "instances": ["quilt"]}}}
 EOF
+python3 -I "$(dirname "$0")/dev-seed-content.py" "$DIR/instances/survival/minecraft"
 echo "Seeded $DIR"

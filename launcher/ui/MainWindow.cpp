@@ -109,7 +109,8 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/reprism/InstanceCardDelegate.h"
-#include "ui/reprism/InstanceDetailsPanel.h"
+#include "ui/reprism/InstancePage.h"
+#include <QStackedWidget>
 #include "ui/reprism/InstanceSummary.h"
 #include "ui/reprism/ModpackAuthors.h"
 #include "ui/reprism/NavRail.h"
@@ -1604,7 +1605,6 @@ void MainWindow::changeEvent(QEvent* event)
     if (event->type() == QEvent::PaletteChange && m_navRail) {
         // RePrism: re-tint the shell's line icons for the new theme
         m_navRail->refreshIcons();
-        m_details->refreshIcons();
         m_searchAction->setIcon(ReprismIcons::icon("search", palette().color(QPalette::PlaceholderText)));
         m_newInstanceButton->setIcon(ReprismIcons::icon("plus", palette().color(QPalette::HighlightedText)));
         applyReprismActionIcons();
@@ -1707,8 +1707,8 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
 
         connect(m_selectedInstance, &BaseInstance::runningStatusChanged, this, &MainWindow::refreshCurrentInstance);
         connect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
-        if (m_details)
-            m_details->setInstance(m_selectedInstance);
+        if (m_instancePage && m_instancePage->instance() == m_selectedInstance)
+            m_instancePage->refreshHeader();
     } else {
         APPLICATION->settings()->set("SelectedInstance", QString());
         selectionBad();
@@ -1744,8 +1744,6 @@ void MainWindow::selectionBad()
     updateLaunchButton();
     m_nameLabel->setText(tr("No Instance Selected"));
     updateInstanceToolIcon("default");
-    if (m_details)
-        m_details->setInstance(nullptr);
 
     // ...and then see if we can enable the previously selected instance
     setSelectedInstanceById(APPLICATION->settings()->get("SelectedInstance").toString());
@@ -1868,27 +1866,39 @@ void MainWindow::setupReprismShell()
 
     // Navigation rail
     m_navRail = new NavRail(ui->centralWidget);
-    auto* libraryButton = m_navRail->addActionButton("library", new QAction(tr("Library"), this));
-    libraryButton->setCheckable(true);
-    libraryButton->setChecked(true);
+    auto* libraryAction = new QAction(tr("Library"), this);
+    connect(libraryAction, &QAction::triggered, this, &MainWindow::showLibrary);
+    m_libraryButton = m_navRail->addActionButton("library", libraryAction);
+    m_libraryButton->setCheckable(true);
+    m_libraryButton->setChecked(true);
     m_navRail->addActionButton("plus", ui->actionAddInstance);
     m_navRail->addSeparator();
     m_navRail->addMenuButton("folder-open", tr("Folders"), ui->foldersMenu, true);
     m_navRail->addMenuButton("circle-help", tr("Help"), ui->actionHelpButton->menu(), true);
     m_navRail->addActionButton("settings", ui->actionSettings, true);
     m_navRail->addMirrorButton(ui->actionAccountsButton, true);
-    connect(m_navRail, &NavRail::instanceClicked, this, [this](const QString& id) { setSelectedInstanceById(id); });
+    connect(m_navRail, &NavRail::instanceClicked, this, [this](const QString& id) {
+        if (auto* instance = APPLICATION->instances()->getInstanceById(id))
+            openInstancePage(instance);
+    });
 
-    // Library page: header (title, search, new instance) above the card grid and the details panel
+    // Content area: a stack of pages (the library, and the page of one instance)
     auto* content = new QFrame(ui->centralWidget);
     content->setObjectName(QStringLiteral("reprismContent"));
-    auto* contentLayout = new QVBoxLayout(content);
-    contentLayout->setContentsMargins(24, 20, 20, 20);
+    auto* contentOuter = new QVBoxLayout(content);
+    contentOuter->setContentsMargins(24, 20, 20, 20);
+    m_pages = new QStackedWidget(content);
+    contentOuter->addWidget(m_pages);
+
+    // Library page: header (title, search, new instance) above the card grid
+    auto* library = new QWidget(m_pages);
+    auto* contentLayout = new QVBoxLayout(library);
+    contentLayout->setContentsMargins(0, 0, 0, 0);
     contentLayout->setSpacing(16);
 
     auto* header = new QHBoxLayout();
     header->setSpacing(10);
-    auto* title = new QLabel(tr("Library"), content);
+    auto* title = new QLabel(tr("Library"), library);
     title->setObjectName(QStringLiteral("reprismPageTitle"));
     QFont titleFont = title->font();
     titleFont.setBold(true);
@@ -1897,7 +1907,7 @@ void MainWindow::setupReprismShell()
     header->addWidget(title);
     header->addStretch(1);
 
-    m_searchEdit = new QLineEdit(content);
+    m_searchEdit = new QLineEdit(library);
     m_searchEdit->setObjectName(QStringLiteral("reprismSearch"));
     m_searchEdit->setPlaceholderText(tr("Search instances…"));
     m_searchEdit->setClearButtonEnabled(true);
@@ -1907,46 +1917,38 @@ void MainWindow::setupReprismShell()
     connect(m_searchEdit, &QLineEdit::textChanged, proxymodel, &QSortFilterProxyModel::setFilterFixedString);
     header->addWidget(m_searchEdit);
 
-    m_newInstanceButton = new QPushButton(ReprismIcons::icon("plus", palette().color(QPalette::HighlightedText)), tr("New instance"), content);
+    m_newInstanceButton = new QPushButton(ReprismIcons::icon("plus", palette().color(QPalette::HighlightedText)), tr("New instance"), library);
     m_newInstanceButton->setObjectName(QStringLiteral("reprismPrimaryButton"));
     m_newInstanceButton->setCursor(Qt::PointingHandCursor);
     connect(m_newInstanceButton, &QPushButton::clicked, ui->actionAddInstance, &QAction::trigger);
     header->addWidget(m_newInstanceButton);
     contentLayout->addLayout(header);
 
-    auto* body = new QHBoxLayout();
-    body->setSpacing(16);
     ui->horizontalLayout->removeWidget(view);
-    view->setParent(content);
-    body->addWidget(view, 1);
+    view->setParent(library);
+    contentLayout->addWidget(view, 1);
+    m_pages->addWidget(library);
 
-    auto* moreMenu = new QMenu(this);
-    moreMenu->addAction(ui->actionChangeInstGroup);
-    moreMenu->addAction(ui->actionChangeInstIcon);
-    moreMenu->addAction(ui->actionRenameInstance);
-    moreMenu->addSeparator();
-    moreMenu->addAction(ui->actionExportInstance);
-    moreMenu->addAction(ui->actionCopyInstance);
-    moreMenu->addAction(ui->actionCreateInstanceShortcut);
-    moreMenu->addSeparator();
-    moreMenu->addAction(ui->actionDeleteInstance);
-    m_details = new InstanceDetailsPanel(
-        { ui->actionLaunchInstance, ui->actionKillInstance, ui->actionEditInstance, ui->actionViewSelectedInstFolder, moreMenu },
-        m_changeIconButton, m_nameLabel, content);
-    body->addWidget(m_details);
-    contentLayout->addLayout(body, 1);
+    // Instance page, opened by clicking a card
+    m_instancePage = new InstancePage({ ui->actionLaunchInstance, ui->actionKillInstance, ui->actionEditInstance }, m_changeIconButton,
+                                      m_nameLabel, m_pages);
+    m_nameLabel->setTextAlignment(Qt::AlignLeft);
+    m_pages->addWidget(m_instancePage);
+    connect(m_instancePage, &InstancePage::backRequested, this, &MainWindow::showLibrary);
 
     ui->horizontalLayout->addWidget(m_navRail);
     ui->horizontalLayout->addWidget(content, 1);
 
-    // Clicking the play button shown over a hovered card launches that instance.
+    // Clicking a card opens its page; clicking the play button shown over a hovered card launches it.
     connect(view, &InstanceView::clicked, this, [this](const QModelIndex& index) {
-        const QPoint pos = view->viewport()->mapFromGlobal(QCursor::pos());
-        if (!InstanceCardDelegate::playButtonRect(view->visualRect(index)).contains(pos))
-            return;
         auto* instance = APPLICATION->instances()->getInstanceById(index.data(InstanceList::InstanceIDRole).toString());
         if (!instance)
             return;
+        const QPoint pos = view->viewport()->mapFromGlobal(QCursor::pos());
+        if (!InstanceCardDelegate::playButtonRect(view->visualRect(index)).contains(pos)) {
+            openInstancePage(instance);
+            return;
+        }
         if (instance->isRunning())
             ui->actionKillInstance->trigger();
         else
@@ -1957,16 +1959,29 @@ void MainWindow::setupReprismShell()
     connect(instances, &QAbstractItemModel::rowsInserted, this, &MainWindow::refreshRecentInstances);
     connect(instances, &QAbstractItemModel::rowsRemoved, this, &MainWindow::refreshRecentInstances);
     connect(instances, &QAbstractItemModel::modelReset, this, &MainWindow::refreshRecentInstances);
-    connect(ModpackAuthors::instance(), &ModpackAuthors::resolved, this, [this](const QString& id) {
-        view->viewport()->update();
-        if (m_selectedInstance && m_selectedInstance->id() == id)
-            m_details->setInstance(m_selectedInstance);
+    connect(instances, &QAbstractItemModel::rowsRemoved, this, [this] {
+        // leave the page of an instance that was just deleted
+        if (m_instancePage->instance() && !APPLICATION->instances()->getInstanceById(m_instancePage->instance()->id()))
+            showLibrary();
     });
+    connect(ModpackAuthors::instance(), &ModpackAuthors::resolved, this, [this] { view->viewport()->update(); });
     refreshRecentInstances();
-
-    if (m_selectedInstance)
-        m_details->setInstance(m_selectedInstance);
     applyReprismActionIcons();
+}
+
+void MainWindow::showLibrary()
+{
+    m_pages->setCurrentIndex(0);
+    m_libraryButton->setChecked(true);
+    view->setFocus();
+}
+
+void MainWindow::openInstancePage(MinecraftInstance* instance)
+{
+    setSelectedInstanceById(instance->id());
+    m_instancePage->setInstance(instance);
+    m_pages->setCurrentWidget(m_instancePage);
+    m_libraryButton->setChecked(false);
 }
 
 void MainWindow::applyReprismActionIcons()

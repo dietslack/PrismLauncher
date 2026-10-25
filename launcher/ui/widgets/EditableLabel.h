@@ -32,6 +32,7 @@ class EditableLabel : public QWidget {
     explicit EditableLabel(QWidget* parent);
 
     void setText(const QString& text);
+    void setTextAlignment(Qt::Alignment alignment);
 
     bool eventFilter(QObject* watched, QEvent* event) override;
 
@@ -43,4 +44,5 @@ class EditableLabel : public QWidget {
 
     QTextEdit* m_edit;
     QString m_oldText;
+    Qt::Alignment m_alignment = Qt::AlignHCenter;
 };

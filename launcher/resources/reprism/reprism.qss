@@ -808,21 +808,6 @@ QPushButton#reprismPlayButton[running="true"] {
     border: 1px solid @borderStrong@;
 }
 
-#reprismDetails {
-    background-color: @surface2@;
-    border: none;
-    border-radius: 16px;
-}
-
-QToolButton#reprismDetailsIcon {
-    background-color: @surface@;
-    border: none;
-    border-radius: 20px;
-}
-
-QToolButton#reprismDetailsIcon:hover {
-    background-color: @surface3@;
-}
 
 QToolButton#reprismSecondaryButton, QToolButton#reprismMoreButton {
     background-color: @surface3@;
@@ -834,11 +819,137 @@ QToolButton#reprismSecondaryButton:hover, QToolButton#reprismMoreButton:hover {
     border-color: @borderStrong@;
 }
 
-#reprismDetails EditableLabel QTextEdit:disabled {
+
+/* ---------- Instance page ---------- */
+
+QToolButton#reprismBackButton {
+    color: @muted@;
+    background: transparent;
+    border: none;
+    padding: 2px 6px 2px 0px;
+}
+
+QToolButton#reprismBackButton:hover {
     color: @text@;
 }
 
-#reprismDetailsName QTextEdit {
-    font-size: 14pt;
+QToolButton#reprismHeaderIcon {
+    background-color: @surface2@;
+    border: none;
+    border-radius: 20px;
+}
+
+QToolButton#reprismHeaderIcon:hover {
+    background-color: @surface3@;
+}
+
+#reprismHeaderName QTextEdit {
+    font-size: 20pt;
     font-weight: 700;
+}
+
+QTabBar#reprismTabs::tab {
+    color: @muted@;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 16px;
+    margin-right: 4px;
+    font-weight: 600;
+}
+
+QTabBar#reprismTabs::tab:hover {
+    color: @text@;
+    background-color: @surface2@;
+}
+
+QTabBar#reprismTabs::tab:selected {
+    color: @text@;
+    background-color: @surface3@;
+}
+
+QPushButton#reprismFilterChip {
+    color: @muted@;
+    background: transparent;
+    border: 1px solid @border@;
+    border-radius: 14px;
+    padding: 5px 12px;
+    min-height: 16px;
+}
+
+QPushButton#reprismFilterChip:hover {
+    color: @text@;
+    border-color: @borderStrong@;
+}
+
+QPushButton#reprismFilterChip:checked {
+    color: @accentText@;
+    background-color: @accent@;
+    border-color: @accent@;
+}
+
+QPushButton#reprismToolbarButton {
+    background-color: @surface2@;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+
+QPushButton#reprismToolbarButton:hover {
+    border-color: @borderStrong@;
+}
+
+QPushButton#reprismToolbarButton::menu-indicator {
+    image: none;
+    width: 0px;
+}
+
+QPushButton#reprismBreadcrumb {
+    color: @muted@;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 6px;
+    min-height: 16px;
+}
+
+QPushButton#reprismBreadcrumb:hover {
+    color: @text@;
+    background-color: @surface2@;
+}
+
+QPushButton#reprismBreadcrumb[current="true"] {
+    color: @text@;
+    font-weight: 600;
+}
+
+QTreeView#reprismContentList::item {
+    padding: 6px 4px;
+}
+
+QListWidget#reprismWorldsList {
+    background: transparent;
+    border: none;
+}
+
+QListWidget#reprismWorldsList::item, QListWidget#reprismWorldsList::item:hover, QListWidget#reprismWorldsList::item:selected {
+    background: transparent;
+}
+
+QTreeView#reprismContentList::indicator {
+    width: 16px;
+    height: 16px;
+    background-color: @input@;
+    border: 1px solid @borderStrong@;
+    border-radius: 5px;
+}
+
+QTreeView#reprismContentList::indicator:hover {
+    border-color: @focus@;
+}
+
+QTreeView#reprismContentList::indicator:checked {
+    background-color: @accent@;
+    border-color: @accent@;
+    image: url(theme:check.svg);
 }

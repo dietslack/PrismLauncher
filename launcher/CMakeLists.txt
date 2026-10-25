@@ -834,8 +834,16 @@ SET(LAUNCHER_SOURCES
     ui/reprism/InstanceCardDelegate.cpp
     ui/reprism/NavRail.h
     ui/reprism/NavRail.cpp
-    ui/reprism/InstanceDetailsPanel.h
-    ui/reprism/InstanceDetailsPanel.cpp
+    ui/reprism/PlayButton.h
+    ui/reprism/PlayButton.cpp
+    ui/reprism/InstancePage.h
+    ui/reprism/InstancePage.cpp
+    ui/reprism/ContentTab.h
+    ui/reprism/ContentTab.cpp
+    ui/reprism/FilesTab.h
+    ui/reprism/FilesTab.cpp
+    ui/reprism/WorldsTab.h
+    ui/reprism/WorldsTab.cpp
     ui/MultiDecorationItemDelegate.h
     ui/MultiDecorationItemDelegate.cpp
 
