@@ -67,7 +67,7 @@ FilesTab::FilesTab(QWidget* parent) : QWidget(parent)
     m_iconProvider = std::make_unique<LineIconProvider>();
     m_model->setIconProvider(m_iconProvider.get());
     m_view = new QTreeView(this);
-    m_view->setObjectName(QStringLiteral("reprismContentList"));
+    m_view->setObjectName(QStringLiteral("reprismFilesList"));
     m_view->setModel(m_model);
     m_view->setRootIsDecorated(false);
     m_view->setItemsExpandable(false);

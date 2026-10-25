@@ -923,7 +923,7 @@ QPushButton#reprismBreadcrumb[current="true"] {
     font-weight: 600;
 }
 
-QTreeView#reprismContentList::item {
+QTreeView#reprismContentList::item, QTreeView#reprismFilesList::item {
     padding: 6px 4px;
 }
 
@@ -936,20 +936,3 @@ QListWidget#reprismWorldsList::item, QListWidget#reprismWorldsList::item:hover, 
     background: transparent;
 }
 
-QTreeView#reprismContentList::indicator {
-    width: 16px;
-    height: 16px;
-    background-color: @input@;
-    border: 1px solid @borderStrong@;
-    border-radius: 5px;
-}
-
-QTreeView#reprismContentList::indicator:hover {
-    border-color: @focus@;
-}
-
-QTreeView#reprismContentList::indicator:checked {
-    background-color: @accent@;
-    border-color: @accent@;
-    image: url(theme:check.svg);
-}

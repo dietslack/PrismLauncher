@@ -114,10 +114,10 @@ void install()
         });
     }
 
-    // "objectName:x,y;objectName:x,y" clicks those points in order, 400 ms apart.
+    // "objectName:x,y;objectName:x,y" clicks those points in order, 1 s apart.
     const QStringList presses = qEnvironmentVariable("REPRISM_SCREENSHOT_PRESS").split(';', Qt::SkipEmptyParts);
     for (int i = 0; i < presses.size(); i++) {
-        QTimer::singleShot(delay / 2 + i * 400, qApp, [step = presses[i]] {
+        QTimer::singleShot(delay / 2 + i * 1000, qApp, [step = presses[i]] {
             const auto target = step.split(':');
             const auto coords = target.value(1).split(',');
             if (target.size() != 2 || coords.size() != 2)

@@ -2,8 +2,12 @@
 #pragma once
 
 #include <QAbstractTableModel>
+#include <QSet>
 #include <QSortFilterProxyModel>
 #include <QWidget>
+
+#include <memory>
+#include <vector>
 
 class MinecraftInstance;
 class QButtonGroup;
@@ -11,16 +15,18 @@ class QComboBox;
 class QLabel;
 class QLineEdit;
 class QTreeView;
+class QWidget;
 class Resource;
 class ResourceFolderModel;
 
 /// One table over all of an instance's content: mods, resource packs, data packs and shaders.
+/// Rows can be checked (selected) for bulk actions; checks are kept by file path across reloads.
 class ContentModel : public QAbstractTableModel {
     Q_OBJECT
    public:
     enum class Type { Mod, ResourcePack, DataPack, Shader };
-    enum Column { NameColumn, VersionColumn, TypeColumn, SourceColumn, ColumnCount };
-    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole };
+    enum Column { SelectColumn, NameColumn, VersionColumn, TypeColumn, SourceColumn, EnabledColumn, ColumnCount };
+    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole, EnabledRole };
 
     explicit ContentModel(QObject* parent = nullptr);
     void setInstance(MinecraftInstance* instance);
@@ -36,13 +42,20 @@ class ContentModel : public QAbstractTableModel {
     /// The source folder model and its index for `row`.
     std::pair<ResourceFolderModel*, QModelIndex> source(int row) const;
     Resource* resource(int row) const;
-    Type typeOf(int row) const { return m_entries.at(row).type; }
     ResourceFolderModel* folder(Type type) const;
     int count(Type type) const;
     static QString typeName(Type type);
 
+    bool isChecked(int row) const;
+    void setChecked(const QList<int>& rows, bool checked);
+    QList<int> checkedRows() const;
+
+   signals:
+    void checksChanged();
+
    private:
     void rebuild();
+    QString pathOf(int row) const;
 
     struct Entry {
         ResourceFolderModel* model;
@@ -53,6 +66,7 @@ class ContentModel : public QAbstractTableModel {
     QHash<ResourceFolderModel*, QString> m_worldNames;               ///< world each per-world data pack folder belongs to
     std::vector<std::unique_ptr<ResourceFolderModel>> m_ownedFolders;  ///< per-world data pack folders
     QList<Entry> m_entries;
+    QSet<QString> m_checked;  ///< absolute file paths of checked rows
 };
 
 class ContentFilterProxy : public QSortFilterProxyModel {
@@ -83,7 +97,9 @@ class ContentTab : public QWidget {
     void applySort(int option);
     void showContextMenu(const QPoint& pos);
     void addFiles(ContentModel::Type type);
-    QList<int> selectedRows() const;
+    void setEnabled(const QList<int>& rows, bool enabled);
+    void deleteRows(const QList<int>& rows);
+    QList<int> visibleRows() const;
 
     MinecraftInstance* m_instance = nullptr;
     ContentModel* m_model;
@@ -93,4 +109,6 @@ class ContentTab : public QWidget {
     QComboBox* m_sort;
     QButtonGroup* m_filters;
     QLabel* m_summary;
+    QWidget* m_bulkBar;
+    QLabel* m_bulkLabel;
 };
