@@ -56,5 +56,7 @@
         <file>icons/package.svg</file>
         <file>icons/sun.svg</file>
         <file>icons/file.svg</file>
+        <file>icons/download.svg</file>
+        <file>icons/history.svg</file>
     </qresource>
 </RCC>

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QAbstractTableModel>
+#include <QHash>
 #include <QSet>
 #include <QSortFilterProxyModel>
 #include <QWidget>
@@ -9,11 +10,16 @@
 #include <memory>
 #include <vector>
 
+#include "Version.h"
+#include "tasks/Task.h"
+
 class MinecraftInstance;
 class QButtonGroup;
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QPushButton;
+class QTimer;
 class QTreeView;
 class QWidget;
 class Resource;
@@ -25,8 +31,8 @@ class ContentModel : public QAbstractTableModel {
     Q_OBJECT
    public:
     enum class Type { Mod, ResourcePack, DataPack, Shader };
-    enum Column { SelectColumn, NameColumn, VersionColumn, TypeColumn, SourceColumn, EnabledColumn, ColumnCount };
-    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole, EnabledRole };
+    enum Column { SelectColumn, NameColumn, VersionColumn, TypeColumn, SourceColumn, ActionsColumn, ColumnCount };
+    enum Roles { TypeRole = Qt::UserRole + 1, FileNameRole, DateRole, EnabledRole, UpdateRole, HasSourceRole };
 
     explicit ContentModel(QObject* parent = nullptr);
     void setInstance(MinecraftInstance* instance);
@@ -45,6 +51,12 @@ class ContentModel : public QAbstractTableModel {
     ResourceFolderModel* folder(Type type) const;
     int count(Type type) const;
     static QString typeName(Type type);
+    QList<std::pair<ResourceFolderModel*, Type>> folders() const { return m_folders; }
+
+    /// Available updates, by absolute file path → new version name.
+    void setUpdates(const QHash<QString, QString>& updates);
+    QString pathOf(int row) const;
+    int rowOfPath(const QString& path) const;
 
     bool isChecked(int row) const;
     void setChecked(const QList<int>& rows, bool checked);
@@ -55,7 +67,6 @@ class ContentModel : public QAbstractTableModel {
 
    private:
     void rebuild();
-    QString pathOf(int row) const;
 
     struct Entry {
         ResourceFolderModel* model;
@@ -67,6 +78,7 @@ class ContentModel : public QAbstractTableModel {
     std::vector<std::unique_ptr<ResourceFolderModel>> m_ownedFolders;  ///< per-world data pack folders
     QList<Entry> m_entries;
     QSet<QString> m_checked;  ///< absolute file paths of checked rows
+    QHash<QString, QString> m_updates;  ///< absolute file path → available version
 };
 
 class ContentFilterProxy : public QSortFilterProxyModel {
@@ -99,6 +111,10 @@ class ContentTab : public QWidget {
     void addFiles(ContentModel::Type type);
     void setEnabled(const QList<int>& rows, bool enabled);
     void deleteRows(const QList<int>& rows);
+    void checkForUpdates();
+    void updateRows(const QList<int>& rows);
+    void changeVersion(int row);
+    bool confirmWhileRunning(const QString& title);
     QList<int> visibleRows() const;
 
     MinecraftInstance* m_instance = nullptr;
@@ -111,4 +127,22 @@ class ContentTab : public QWidget {
     QLabel* m_summary;
     QWidget* m_bulkBar;
     QLabel* m_bulkLabel;
+    QPushButton* m_updateButton;
+    QTimer* m_updateCheckTimer;
+    bool m_autoChecked = false;  ///< the automatic update check ran for this instance
+
+    /// A running update check. CheckUpdateTask keeps references to its resource list and versions, so they live here.
+    struct UpdateCheck {
+        QList<Resource*> resources;
+        std::vector<Version> versions;
+        ResourceFolderModel* folder;
+        Task::Ptr task;
+    };
+    std::vector<std::unique_ptr<UpdateCheck>> m_checks;
+    Task::Ptr m_checkTask;
+    struct PendingUpdate {
+        QString version;
+        Task::Ptr download;
+    };
+    QHash<QString, PendingUpdate> m_pendingUpdates;  ///< absolute file path → update
 };

@@ -13,6 +13,8 @@
 #include "Application.h"
 #include "MMCTime.h"
 #include "minecraft/MinecraftInstance.h"
+#include "minecraft/PackProfile.h"
+#include "net/Mode.h"
 #include "settings/SettingsObject.h"
 #include "ui/pages/instance/LogPage.h"
 #include "ui/reprism/ContentTab.h"
@@ -110,6 +112,12 @@ void InstancePage::setInstance(MinecraftInstance* instance)
     }
     m_instance = instance;
     m_loaded.fill(false);
+    // Make sure the component list (Minecraft version, loaders) is loaded, as Prism's own pages do;
+    // the content tab's version picker filters by it.
+    if (instance && instance->getPackProfile()->getComponentVersion("net.minecraft").isEmpty()) {
+        if (auto res = instance->getPackProfile()->reload(Net::Mode::Offline); !res)
+            qWarning() << "Failed to load components of" << instance->name() << res.error();
+    }
     delete m_logPage;
     m_logPage = nullptr;
     m_playButton->setInstance(instance);

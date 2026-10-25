@@ -16,6 +16,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyledItemDelegate>
+#include <QTimer>
+#include <QToolTip>
 #include <QPushButton>
 #include <QTreeView>
 #include <QUrl>
@@ -23,12 +25,22 @@
 #include "Application.h"
 #include "DesktopServices.h"
 #include "minecraft/MinecraftInstance.h"
+#include "minecraft/PackProfile.h"
+#include "modplatform/flame/FlameCheckUpdate.h"
+#include "modplatform/modrinth/ModrinthCheckUpdate.h"
+#include "settings/SettingsObject.h"
+#include "tasks/ConcurrentTask.h"
+#include "tasks/SequentialTask.h"
+#include "ui/dialogs/CustomMessageBox.h"
+#include "ui/dialogs/ProgressDialog.h"
+#include "ui/dialogs/ResourceDownloadDialog.h"
 #include "minecraft/mod/DataPack.h"
 #include "minecraft/mod/DataPackFolderModel.h"
 #include "minecraft/mod/Mod.h"
 #include "minecraft/mod/ModFolderModel.h"
 #include "minecraft/mod/ResourcePackFolderModel.h"
 #include "minecraft/mod/ShaderPackFolderModel.h"
+#include "ui/reprism/InstanceSummary.h"
 #include "ui/reprism/ReprismIcons.h"
 
 namespace {
@@ -87,37 +99,111 @@ class SelectDelegate : public QStyledItemDelegate {
     }
 };
 
-/// "Enabled" column: a small toggle switch.
-class SwitchDelegate : public QStyledItemDelegate {
+/// "Actions" column: version button (update / change version), enable switch and delete button.
+class ActionsDelegate : public QStyledItemDelegate {
    public:
-    using QStyledItemDelegate::QStyledItemDelegate;
-    static QRectF track(const QRect& cell) { return QRectF(cell.center().x() - 16 + 0.5, cell.center().y() - 9 + 0.5, 32, 18); }
+    enum Action { VersionAction, ToggleAction, DeleteAction };
+    using Handler = std::function<void(const QModelIndex&, Action)>;
+
+    ActionsDelegate(QAbstractItemView* view, Handler handler) : QStyledItemDelegate(view), m_view(view), m_handler(std::move(handler)) {}
+
+    static constexpr int Width = 132;
+    static QRect versionRect(const QRect& cell) { return QRect(cell.right() - 120, cell.center().y() - 15, 30, 30); }
+    static QRectF switchRect(const QRect& cell) { return QRectF(cell.right() - 82 + 0.5, cell.center().y() - 9 + 0.5, 32, 18); }
+    static QRect deleteRect(const QRect& cell) { return QRect(cell.right() - 38, cell.center().y() - 15, 30, 30); }
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
         const QPalette pal = QApplication::palette();
-        const bool on = index.data(ContentModel::EnabledRole).toBool();
-        const QRectF t = track(option.rect);
+        const qreal dpr = painter->device()->devicePixelRatioF();
+        const QPoint cursor = m_view->viewport()->mapFromGlobal(QCursor::pos());
+        const bool rowHovered = option.state & QStyle::State_MouseOver;
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
+
+        auto iconButton = [&](const QRect& rect, const QString& icon, bool filled) {
+            const bool hovered = rowHovered && rect.contains(cursor);
+            painter->setPen(Qt::NoPen);
+            if (filled)
+                painter->setBrush(hovered ? pal.color(QPalette::Highlight).lighter(110) : pal.color(QPalette::Highlight));
+            else
+                painter->setBrush(hovered ? pal.color(QPalette::Light) : Qt::transparent);
+            painter->drawRoundedRect(rect, 8, 8);
+            const QColor fg = filled ? pal.color(QPalette::HighlightedText) : withAlpha(pal.color(QPalette::Text), hovered ? 1.0 : 0.75);
+            painter->drawPixmap(rect.center().x() - 8 + 1, rect.center().y() - 8 + 1, ReprismIcons::pixmap(icon, fg, 16, dpr));
+        };
+
+        // Version: update when one is available, otherwise change version for content from Modrinth/CurseForge.
+        if (!index.data(ContentModel::UpdateRole).toString().isEmpty())
+            iconButton(versionRect(option.rect), "download", true);
+        else if (index.data(ContentModel::HasSourceRole).toBool())
+            iconButton(versionRect(option.rect), "history", false);
+
+        // Enable switch
+        const bool on = index.data(ContentModel::EnabledRole).toBool();
+        const QRectF t = switchRect(option.rect);
         painter->setPen(Qt::NoPen);
         painter->setBrush(on ? pal.color(QPalette::Highlight) : pal.color(QPalette::Light));
         painter->drawRoundedRect(t, 9, 9);
         const qreal knob = 12;
-        const qreal x = on ? t.right() - 3 - knob : t.left() + 3;
         painter->setBrush(on ? pal.color(QPalette::HighlightedText) : withAlpha(pal.color(QPalette::Text), 0.7));
-        painter->drawEllipse(QRectF(x, t.center().y() - knob / 2, knob, knob));
+        painter->drawEllipse(QRectF(on ? t.right() - 3 - knob : t.left() + 3, t.center().y() - knob / 2, knob, knob));
+
+        iconButton(deleteRect(option.rect), "trash-2", false);
         painter->restore();
     }
-    bool editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index) override
+
+    bool editorEvent(QEvent* event, QAbstractItemModel*, const QStyleOptionViewItem& option, const QModelIndex& index) override
     {
-        if (event->type() == QEvent::MouseButtonRelease) {
-            const auto* mouse = static_cast<QMouseEvent*>(event);
-            if (track(option.rect).adjusted(-6, -6, 6, 6).contains(mouse->position()))
-                model->setData(index, !index.data(ContentModel::EnabledRole).toBool(), ContentModel::EnabledRole);
-            return true;
+        if (event->type() != QEvent::MouseButtonRelease)
+            return event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick;
+        const QPointF pos = static_cast<QMouseEvent*>(event)->position();
+        const bool hasVersionButton =
+            !index.data(ContentModel::UpdateRole).toString().isEmpty() || index.data(ContentModel::HasSourceRole).toBool();
+        if (hasVersionButton && versionRect(option.rect).contains(pos.toPoint()))
+            m_handler(index, VersionAction);
+        else if (switchRect(option.rect).adjusted(-6, -6, 6, 6).contains(pos))
+            m_handler(index, ToggleAction);
+        else if (deleteRect(option.rect).contains(pos.toPoint()))
+            m_handler(index, DeleteAction);
+        return true;
+    }
+
+    bool helpEvent(QHelpEvent* event, QAbstractItemView* view, const QStyleOptionViewItem& option, const QModelIndex& index) override
+    {
+        const QString update = index.data(ContentModel::UpdateRole).toString();
+        QString tip;
+        if (versionRect(option.rect).contains(event->pos())) {
+            if (!update.isEmpty())
+                tip = QObject::tr("Update to %1").arg(update);
+            else if (index.data(ContentModel::HasSourceRole).toBool())
+                tip = QObject::tr("Change version");
+        } else if (switchRect(option.rect).adjusted(-6, -6, 6, 6).contains(event->pos())) {
+            tip = index.data(ContentModel::EnabledRole).toBool() ? QObject::tr("Disable") : QObject::tr("Enable");
+        } else if (deleteRect(option.rect).contains(event->pos())) {
+            tip = QObject::tr("Delete");
         }
-        return event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick;
+        if (tip.isEmpty())
+            QToolTip::hideText();
+        else
+            QToolTip::showText(event->globalPos(), tip, view);
+        return true;
+    }
+
+   private:
+    QAbstractItemView* m_view;
+    Handler m_handler;
+};
+
+/// Repaints a view's viewport as the mouse moves, so cell buttons can highlight under the cursor.
+class HoverRepaint : public QObject {
+   public:
+    using QObject::QObject;
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::MouseMove || event->type() == QEvent::Leave)
+            static_cast<QWidget*>(watched)->update();
+        return false;
     }
 };
 
@@ -218,6 +304,21 @@ QString ContentModel::pathOf(int row) const
     return res ? res->fileinfo().absoluteFilePath() : QString();
 }
 
+void ContentModel::setUpdates(const QHash<QString, QString>& updates)
+{
+    m_updates = updates;
+    if (rowCount() > 0)
+        emit dataChanged(index(0, 0), index(rowCount() - 1, ColumnCount - 1));
+}
+
+int ContentModel::rowOfPath(const QString& path) const
+{
+    for (int row = 0; row < m_entries.size(); row++)
+        if (pathOf(row) == path)
+            return row;
+    return -1;
+}
+
 bool ContentModel::isChecked(int row) const
 {
     return m_checked.contains(pathOf(row));
@@ -316,6 +417,10 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
         return QApplication::palette().color(QPalette::PlaceholderText);
     if (role == EnabledRole)
         return res->enabled();
+    if (role == UpdateRole)
+        return m_updates.value(res->fileinfo().absoluteFilePath());
+    if (role == HasSourceRole)
+        return res->metadata() != nullptr;
 
     switch (index.column()) {
         case SelectColumn:
@@ -338,8 +443,10 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
             }
             break;
         case VersionColumn:
-            if (role == Qt::DisplayRole)
-                return res->version();
+            if (role == Qt::DisplayRole) {
+                const QString update = m_updates.value(res->fileinfo().absoluteFilePath());
+                return update.isEmpty() ? res->version() : QString("%1  →  %2").arg(res->version(), update);
+            }
             break;
         case TypeColumn:
             if (role == Qt::DisplayRole) {
@@ -365,7 +472,7 @@ bool ContentModel::setData(const QModelIndex& index, const QVariant& value, int 
         setChecked({ index.row() }, value.toInt() == Qt::Checked);
         return true;
     }
-    if (index.column() == EnabledColumn && role == EnabledRole) {
+    if (index.column() == ActionsColumn && role == EnabledRole) {
         auto [model, sourceIndex] = source(index.row());
         return model->setResourceEnabled({ sourceIndex }, value.toBool() ? EnableAction::ENABLE : EnableAction::DISABLE);
     }
@@ -385,8 +492,8 @@ QVariant ContentModel::headerData(int section, Qt::Orientation orientation, int 
             return tr("Type");
         case SourceColumn:
             return tr("Source");
-        case EnabledColumn:
-            return tr("Enabled");
+        case ActionsColumn:
+            return tr("Actions");
         default:
             return {};
     }
@@ -473,6 +580,21 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     m_search->addAction(ReprismIcons::icon("search", palette().color(QPalette::PlaceholderText)), QLineEdit::LeadingPosition);
     toolbar->addWidget(m_search);
 
+    m_updateButton = new QPushButton(ReprismIcons::icon("refresh-cw", palette().color(QPalette::ButtonText)), tr("Check for updates"), this);
+    m_updateButton->setObjectName(QStringLiteral("reprismToolbarButton"));
+    connect(m_updateButton, &QPushButton::clicked, this, [this] {
+        if (m_pendingUpdates.isEmpty()) {
+            checkForUpdates();
+            return;
+        }
+        QList<int> rows;
+        for (auto it = m_pendingUpdates.cbegin(); it != m_pendingUpdates.cend(); ++it)
+            if (int row = m_model->rowOfPath(it.key()); row >= 0)
+                rows.append(row);
+        updateRows(rows);
+    });
+    toolbar->addWidget(m_updateButton);
+
     auto* addButton = new QPushButton(ReprismIcons::icon("plus", palette().color(QPalette::ButtonText)), tr("Add"), this);
     addButton->setObjectName(QStringLiteral("reprismToolbarButton"));
     auto* addMenu = new QMenu(addButton);
@@ -513,7 +635,25 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     m_view->setIconSize(QSize(28, 28));
     m_view->setContextMenuPolicy(Qt::CustomContextMenu);
     m_view->setItemDelegateForColumn(ContentModel::SelectColumn, new SelectDelegate(m_view));
-    m_view->setItemDelegateForColumn(ContentModel::EnabledColumn, new SwitchDelegate(m_view));
+    m_view->setItemDelegateForColumn(
+        ContentModel::ActionsColumn, new ActionsDelegate(m_view, [this](const QModelIndex& index, ActionsDelegate::Action action) {
+            const int row = m_proxy->mapToSource(index).row();
+            switch (action) {
+                case ActionsDelegate::VersionAction:
+                    if (!m_model->index(row, 0).data(ContentModel::UpdateRole).toString().isEmpty())
+                        updateRows({ row });
+                    else
+                        changeVersion(row);
+                    break;
+                case ActionsDelegate::ToggleAction:
+                    setEnabled({ row }, !m_model->index(row, 0).data(ContentModel::EnabledRole).toBool());
+                    break;
+                case ActionsDelegate::DeleteAction:
+                    deleteRows({ row });
+                    break;
+            }
+        }));
+    m_view->viewport()->installEventFilter(new HoverRepaint(m_view));
     header->setSortIndicatorShown(false);
     header->setSectionsClickable(true);  // setSortingEnabled(false) turned this off; the select-all box needs it
     header->setStretchLastSection(false);
@@ -521,8 +661,10 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     header->setSectionResizeMode(ContentModel::SelectColumn, QHeaderView::Fixed);
     header->resizeSection(ContentModel::SelectColumn, 40);
     header->setSectionResizeMode(ContentModel::NameColumn, QHeaderView::Stretch);
-    for (int c = ContentModel::VersionColumn; c < ContentModel::ColumnCount; c++)
+    for (int c = ContentModel::VersionColumn; c < ContentModel::ActionsColumn; c++)
         header->setSectionResizeMode(c, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(ContentModel::ActionsColumn, QHeaderView::Fixed);
+    header->resizeSection(ContentModel::ActionsColumn, ActionsDelegate::Width);
     layout->addWidget(m_view, 1);
 
     // Footer: counts, plus bulk actions while rows are checked
@@ -570,6 +712,19 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     connect(m_proxy, &QAbstractItemModel::layoutChanged, this, &ContentTab::updateCounts);
     connect(m_proxy, &QAbstractItemModel::modelReset, this, &ContentTab::updateCounts);
     connect(m_view, &QWidget::customContextMenuRequested, this, &ContentTab::showContextMenu);
+
+    // Check for updates automatically once the content has finished loading.
+    m_updateCheckTimer = new QTimer(this);
+    m_updateCheckTimer->setSingleShot(true);
+    m_updateCheckTimer->setInterval(1500);
+    connect(m_updateCheckTimer, &QTimer::timeout, this, [this] {
+        m_autoChecked = true;
+        checkForUpdates();
+    });
+    connect(m_model, &QAbstractItemModel::modelReset, this, [this] {
+        if (!m_autoChecked)
+            m_updateCheckTimer->start();
+    });
     applySort(0);
     updateCounts();
 }
@@ -577,6 +732,10 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
 void ContentTab::setInstance(MinecraftInstance* instance)
 {
     m_instance = instance;
+    m_autoChecked = false;
+    m_pendingUpdates.clear();
+    m_model->setUpdates({});
+    m_updateButton->setText(tr("Check for updates"));
     m_model->setInstance(instance);
     m_model->reload();
 }
@@ -657,6 +816,13 @@ void ContentTab::showContextMenu(const QPoint& pos)
 
     const QColor iconColor = palette().color(QPalette::WindowText);
     QMenu menu(this);
+    const bool anyUpdate = std::any_of(rows.begin(), rows.end(), [this](int row) { return m_pendingUpdates.contains(m_model->pathOf(row)); });
+    if (anyUpdate)
+        menu.addAction(ReprismIcons::icon("download", iconColor), tr("Update"), this, [this, rows] { updateRows(rows); });
+    if (rows.size() == 1 && m_model->index(rows.first(), 0).data(ContentModel::HasSourceRole).toBool())
+        menu.addAction(ReprismIcons::icon("history", iconColor), tr("Change version…"), this, [this, rows] { changeVersion(rows.first()); });
+    if (anyUpdate || rows.size() == 1)
+        menu.addSeparator();
     menu.addAction(tr("Enable"), this, [this, rows] { setEnabled(rows, true); });
     menu.addAction(tr("Disable"), this, [this, rows] { setEnabled(rows, false); });
     menu.addSeparator();
@@ -681,4 +847,167 @@ void ContentTab::addFiles(ContentModel::Type type)
     for (const QString& file : files)
         folder->installResource(file);
     folder->update();
+}
+
+bool ContentTab::confirmWhileRunning(const QString& title)
+{
+    if (!m_instance || !m_instance->isRunning())
+        return true;
+    const auto response = CustomMessageBox::selectable(this, title,
+                                                       tr("The game is running. Changing content now may cause duplicated files and crashes, "
+                                                          "and old files may not be removed while they are in use.\n\nContinue anyway?"),
+                                                       QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
+                              ->exec();
+    return response == QMessageBox::Yes;
+}
+
+void ContentTab::checkForUpdates()
+{
+    if (!m_instance || m_checkTask || APPLICATION->settings()->get("ModMetadataDisabled").toBool())
+        return;
+    // Read the Minecraft version and loader from mmc-pack.json: the pack profile may not be loaded yet.
+    const auto components = InstanceSummary::components(m_instance);
+    if (components.minecraft.isEmpty()) {
+        qDebug() << "Content update check skipped: Minecraft version of" << m_instance->name() << "is not known";
+        return;
+    }
+    static const QHash<QString, ModPlatform::ModLoaderType> loaderTypes = {
+        { "Fabric", ModPlatform::Fabric }, { "Quilt", ModPlatform::Quilt },           { "Forge", ModPlatform::Forge },
+        { "NeoForge", ModPlatform::NeoForge }, { "LiteLoader", ModPlatform::LiteLoader },
+    };
+    QList<ModPlatform::ModLoaderType> modLoaders;
+    if (loaderTypes.contains(components.loader))
+        modLoaders.append(loaderTypes.value(components.loader));
+
+    // Only content that came from Modrinth or CurseForge (i.e. has metadata) can be checked.
+    m_checks.clear();
+    auto all = makeShared<SequentialTask>(tr("Checking for updates"));
+    const bool canUseFlame = !APPLICATION->getFlameAPIKey().isEmpty();
+    for (const auto& [folder, type] : m_model->folders()) {
+        QList<Resource*> modrinth, flame;
+        for (int i = 0; i < folder->size(); i++) {
+            Resource& resource = folder->at(i);
+            if (!resource.metadata())
+                continue;
+            (resource.metadata()->provider == ModPlatform::ResourceProvider::MODRINTH ? modrinth : flame).append(&resource);
+        }
+        QList<ModPlatform::ModLoaderType> loaders;
+        if (type == ContentModel::Type::Mod)
+            loaders = modLoaders;
+        else if (type == ContentModel::Type::DataPack)
+            loaders = { ModPlatform::ModLoaderType::DataPack };
+        for (bool isModrinth : { true, false }) {
+            QList<Resource*>& resources = isModrinth ? modrinth : flame;
+            if (resources.isEmpty() || (!isModrinth && !canUseFlame))
+                continue;
+            auto check = std::make_unique<UpdateCheck>();
+            check->resources = resources;
+            check->versions = { Version(components.minecraft) };
+            check->folder = folder;
+            if (isModrinth)
+                check->task = makeShared<ModrinthCheckUpdate>(check->resources, check->versions, loaders, folder);
+            else
+                check->task = makeShared<FlameCheckUpdate>(check->resources, check->versions, loaders, folder);
+            all->addTask(check->task);
+            m_checks.push_back(std::move(check));
+        }
+    }
+    if (m_checks.empty())
+        return;
+    qDebug() << "Checking" << m_instance->name() << "content for updates," << m_checks.size() << "check task(s)";
+
+    m_updateButton->setText(tr("Checking…"));
+    m_updateButton->setEnabled(false);
+    m_checkTask = all;
+    connect(all.get(), &Task::finished, this, [this] {
+        m_pendingUpdates.clear();
+        QHash<QString, QString> versions;
+        for (const auto& check : m_checks) {
+            auto updates = static_cast<CheckUpdateTask*>(check->task.get())->getUpdates();
+            for (auto& update : updates) {
+                for (Resource* resource : check->resources) {
+                    if (resource->name() != update.name)
+                        continue;
+                    const QString path = resource->fileinfo().absoluteFilePath();
+                    m_pendingUpdates.insert(path, { update.newVersion, update.download });
+                    versions.insert(path, update.newVersion);
+                }
+            }
+        }
+        m_model->setUpdates(versions);
+        m_updateButton->setEnabled(true);
+        m_updateButton->setText(m_pendingUpdates.isEmpty() ? tr("Check for updates") : tr("Update all (%1)").arg(m_pendingUpdates.size()));
+        // Release the finished task once its signal has returned.
+        QTimer::singleShot(0, this, [this] {
+            m_checkTask.reset();
+            m_checks.clear();
+        });
+    });
+    all->start();
+}
+
+void ContentTab::updateRows(const QList<int>& rows)
+{
+    QStringList paths;
+    for (int row : rows)
+        if (m_pendingUpdates.contains(m_model->pathOf(row)))
+            paths.append(m_model->pathOf(row));
+    if (paths.isEmpty() || !confirmWhileRunning(tr("Confirm update")))
+        return;
+
+    ConcurrentTask tasks(tr("Updating content"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
+    connect(&tasks, &Task::failed, this,
+            [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
+    for (const QString& path : paths)
+        tasks.addTask(m_pendingUpdates.take(path).download);
+    ProgressDialog progress(this);
+    progress.showSkipButton();
+    progress.execWithTask(&tasks);
+
+    m_model->setUpdates({});
+    m_updateButton->setText(tr("Check for updates"));
+    m_model->reload();
+    m_autoChecked = false;  // re-check once the folders have reloaded
+}
+
+void ContentTab::changeVersion(int row)
+{
+    Resource* resource = m_model->resource(row);
+    if (!resource || !resource->metadata() || !confirmWhileRunning(tr("Confirm version change")))
+        return;
+    auto [folder, index] = m_model->source(row);
+    using ResourceDownload::ResourceDownloadDialog;
+    ResourceDownloadDialog* dialog = nullptr;
+    switch (static_cast<ContentModel::Type>(m_model->index(row, 0).data(ContentModel::TypeRole).toInt())) {
+        case ContentModel::Type::Mod:
+            dialog = ResourceDownloadDialog::createMod(this, folder, m_instance, true);
+            break;
+        case ContentModel::Type::ResourcePack:
+            dialog = ResourceDownloadDialog::createResourcePack(this, folder, m_instance, true);
+            break;
+        case ContentModel::Type::DataPack:
+            dialog = ResourceDownloadDialog::createDataPack(this, folder, m_instance, true);
+            break;
+        case ContentModel::Type::Shader:
+            dialog = ResourceDownloadDialog::createShaderPack(this, folder, m_instance, true);
+            break;
+    }
+    if (!dialog)
+        return;
+    dialog->setResourceMetadata(resource->metadata());
+    connect(dialog, &QDialog::finished, this, [this, dialog, folder = folder](int result) {
+        if (result != 0) {
+            ConcurrentTask tasks(tr("Changing version"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
+            connect(&tasks, &Task::failed, this,
+                    [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
+            for (auto& task : dialog->getTasks())
+                tasks.addTask(task);
+            ProgressDialog progress(this);
+            progress.showSkipButton();
+            progress.execWithTask(&tasks);
+            folder->update();
+        }
+        dialog->deleteLater();
+    });
+    dialog->open();
 }
