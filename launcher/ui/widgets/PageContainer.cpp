@@ -163,6 +163,7 @@ void PageContainer::createUI()
 {
     m_pageStack = new QStackedLayout;
     m_pageList = new PageView;
+    m_pageList->setObjectName(QStringLiteral("pageList"));  // RePrism: styled via #pageList
     m_header = new QLabel();
 
     QFont headerLabelFont = m_header->font();

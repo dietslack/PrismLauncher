@@ -23,6 +23,7 @@
 #include "Application.h"
 
 #include "IconPickerDialog.h"
+#include "ui/reprism/InAppModal.h"
 #include "ui_IconPickerDialog.h"
 
 #include <DesktopServices.h>
@@ -248,7 +249,7 @@ int IconPickerDialog::execWithSelection(QString selection)
     contentsWidget->selectionModel()->select(model_index, QItemSelectionModel::Current | QItemSelectionModel::Select);
 
     QMetaObject::invokeMethod(this, "delayed_scroll", Qt::QueuedConnection, Q_ARG(QModelIndex, model_index));
-    return QDialog::exec();
+    return InAppModal::exec(this);  // RePrism: inside the main window when opened from it
 }
 
 void IconPickerDialog::delayed_scroll(QModelIndex model_index)

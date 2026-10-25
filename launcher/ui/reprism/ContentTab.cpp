@@ -40,6 +40,7 @@
 #include "minecraft/mod/ModFolderModel.h"
 #include "minecraft/mod/ResourcePackFolderModel.h"
 #include "minecraft/mod/ShaderPackFolderModel.h"
+#include "ui/reprism/InAppModal.h"
 #include "ui/reprism/InstanceSummary.h"
 #include "ui/reprism/ReprismIcons.h"
 
@@ -679,10 +680,9 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     auto* addButton = new QPushButton(ReprismIcons::icon("plus", palette().color(QPalette::ButtonText)), tr("Add"), this);
     addButton->setObjectName(QStringLiteral("reprismToolbarButton"));
     auto* addMenu = new QMenu(addButton);
-    addMenu->addAction(ReprismIcons::icon("search", palette().color(QPalette::WindowText)), tr("Browse Modrinth / CurseForge…"), this, [this] {
-        if (m_instance)
-            APPLICATION->showInstanceWindow(m_instance, "mods");
-    });
+    for (auto type : { ContentModel::Type::Mod, ContentModel::Type::ResourcePack, ContentModel::Type::DataPack, ContentModel::Type::Shader })
+        addMenu->addAction(ReprismIcons::icon("search", palette().color(QPalette::WindowText)),
+                           tr("Browse %1…").arg(ContentModel::typeName(type).toLower() + "s"), this, [this, type] { browse(type); });
     addMenu->addSeparator();
     for (auto type : { ContentModel::Type::Mod, ContentModel::Type::ResourcePack, ContentModel::Type::DataPack, ContentModel::Type::Shader })
         addMenu->addAction(tr("Add %1 files…").arg(ContentModel::typeName(type).toLower()), this, [this, type] { addFiles(type); });
@@ -1078,19 +1078,47 @@ void ContentTab::changeVersion(int row)
     if (!dialog)
         return;
     dialog->setResourceMetadata(resource->metadata());
-    connect(dialog, &QDialog::finished, this, [this, dialog, folder = folder](int result) {
-        if (result != 0) {
-            ConcurrentTask tasks(tr("Changing version"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-            connect(&tasks, &Task::failed, this,
-                    [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
-            for (auto& task : dialog->getTasks())
-                tasks.addTask(task);
-            ProgressDialog progress(this);
-            progress.showSkipButton();
-            progress.execWithTask(&tasks);
-            folder->update();
-        }
-        dialog->deleteLater();
-    });
-    dialog->open();
+    runDownloadDialog(dialog, folder);
+}
+
+void ContentTab::browse(ContentModel::Type type)
+{
+    ResourceFolderModel* folder = m_model->folder(type);
+    if (!m_instance || !folder)
+        return;
+    using ResourceDownload::ResourceDownloadDialog;
+    ResourceDownloadDialog* dialog = nullptr;
+    switch (type) {
+        case ContentModel::Type::Mod:
+            dialog = ResourceDownloadDialog::createMod(this, folder, m_instance);
+            break;
+        case ContentModel::Type::ResourcePack:
+            dialog = ResourceDownloadDialog::createResourcePack(this, folder, m_instance);
+            break;
+        case ContentModel::Type::DataPack:
+            dialog = ResourceDownloadDialog::createDataPack(this, folder, m_instance);
+            break;
+        case ContentModel::Type::Shader:
+            dialog = ResourceDownloadDialog::createShaderPack(this, folder, m_instance);
+            break;
+    }
+    if (dialog)
+        runDownloadDialog(dialog, folder);
+}
+
+void ContentTab::runDownloadDialog(QDialog* dialog, ResourceFolderModel* folder)
+{
+    auto* download = static_cast<ResourceDownload::ResourceDownloadDialog*>(dialog);
+    if (InAppModal::exec(download) != 0) {
+        ConcurrentTask tasks(tr("Downloading content"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
+        connect(&tasks, &Task::failed, this,
+                [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
+        for (auto& task : download->getTasks())
+            tasks.addTask(task);
+        ProgressDialog progress(this);
+        progress.showSkipButton();
+        progress.execWithTask(&tasks);
+        folder->update();
+    }
+    download->deleteLater();
 }

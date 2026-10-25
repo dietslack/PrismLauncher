@@ -936,3 +936,43 @@ QListWidget#reprismWorldsList::item, QListWidget#reprismWorldsList::item:hover, 
     background: transparent;
 }
 
+
+/* ---------- In-app windows (InAppModal) ---------- */
+
+#reprismModalCard {
+    background-color: @surface@;
+    border: 1px solid @borderStrong@;
+    border-radius: 16px;
+}
+
+#reprismModalCard > QDialog {
+    background: transparent;
+}
+
+QToolButton#reprismModalClose {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+}
+
+QToolButton#reprismModalClose:hover {
+    background-color: @surface3@;
+}
+
+/* Page lists (New Instance sources, settings sections): borderless with rounded highlights. */
+QListView#pageList {
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+
+QListView#pageList::item {
+    padding: 7px 8px;
+    margin: 1px 0px;
+    border-radius: 8px;
+}
+
+QListView#pageList::item:selected {
+    background-color: @surface3@;
+    color: @text@;
+}

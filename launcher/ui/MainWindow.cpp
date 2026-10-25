@@ -108,6 +108,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/reprism/InAppModal.h"
 #include "ui/reprism/InstanceCardDelegate.h"
 #include "ui/reprism/InstancePage.h"
 #include <QStackedWidget>
@@ -881,7 +882,7 @@ void MainWindow::on_actionCopyInstance_triggered()
         return;
 
     CopyInstanceDialog copyInstDlg(m_selectedInstance, this);
-    if (!copyInstDlg.exec())
+    if (!InAppModal::exec(&copyInstDlg))
         return;
 
     auto copyTask = new InstanceCopyTask(m_selectedInstance, copyInstDlg.getChosenOptions());
@@ -913,7 +914,7 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
     }
 
     NewInstanceDialog newInstDlg(groupName, url, extra_info, this);
-    if (!newInstDlg.exec())
+    if (!InAppModal::exec(&newInstDlg))
         return;
 
     APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg.instGroup());
@@ -1160,7 +1161,7 @@ void MainWindow::processURLs(QList<QUrl> urls)
         }
         ImportResourceDialog dlg(localFileName, type, this);
 
-        if (dlg.exec() != QDialog::Accepted)
+        if (InAppModal::exec(&dlg) != QDialog::Accepted)
             continue;
 
         qDebug() << "Adding resource" << localFileName << "to" << dlg.selectedInstanceKey;
@@ -1417,7 +1418,7 @@ void MainWindow::on_actionManageSkins_triggered()
 
     if (account && (account->accountType() == AccountType::MSA) && !account->isActive()) {
         SkinManageDialog dialog(this, account);
-        dialog.exec();
+        InAppModal::exec(&dialog);
     }
 }
 
@@ -1477,7 +1478,7 @@ void MainWindow::on_actionMoreNews_triggered()
 {
     auto entries = m_newsChecker->getNewsEntries();
     NewsDialog news_dialog(entries, this);
-    news_dialog.exec();
+    InAppModal::exec(&news_dialog);
 }
 
 void MainWindow::newsButtonClicked()
@@ -1485,7 +1486,7 @@ void MainWindow::newsButtonClicked()
     auto entries = m_newsChecker->getNewsEntries();
     NewsDialog news_dialog(entries, this);
     news_dialog.toggleArticleList();
-    news_dialog.exec();
+    InAppModal::exec(&news_dialog);
 }
 
 void MainWindow::onCatChanged(int)
@@ -1496,7 +1497,7 @@ void MainWindow::onCatChanged(int)
 void MainWindow::on_actionAbout_triggered()
 {
     AboutDialog dialog(this);
-    dialog.exec();
+    InAppModal::exec(&dialog);
 }
 
 void MainWindow::on_actionDeleteInstance_triggered()
@@ -1546,7 +1547,7 @@ void MainWindow::on_actionExportInstanceZip_triggered()
 {
     if (m_selectedInstance) {
         ExportInstanceDialog dlg(m_selectedInstance, this);
-        dlg.exec();
+        InAppModal::exec(&dlg);
     }
 }
 
@@ -1554,7 +1555,7 @@ void MainWindow::on_actionExportInstanceMrPack_triggered()
 {
     if (m_selectedInstance) {
         ExportPackDialog dlg(m_selectedInstance, this);
-        dlg.exec();
+        InAppModal::exec(&dlg);
     }
 }
 
@@ -1569,7 +1570,7 @@ void MainWindow::on_actionExportInstanceFlamePack_triggered()
             return;
         }
         ExportPackDialog dlg(m_selectedInstance, this, ModPlatform::ResourceProvider::FLAME);
-        dlg.exec();
+        InAppModal::exec(&dlg);
     }
 }
 
@@ -1655,7 +1656,7 @@ void MainWindow::on_actionCreateInstanceShortcut_triggered()
         return;
 
     CreateShortcutDialog shortcutDlg(m_selectedInstance, this);
-    if (!shortcutDlg.exec())
+    if (!InAppModal::exec(&shortcutDlg))
         return;
     shortcutDlg.createShortcut();
 }

@@ -119,7 +119,7 @@ NewInstanceDialog::NewInstanceDialog(const QString& initialGroup,
     auto* okButton = m_buttons->button(QDialogButtonBox::Ok);
     okButton->setDefault(true);
     okButton->setAutoDefault(true);
-    okButton->setText(tr("OK"));
+    okButton->setText(tr("Create"));
     connect(okButton, &QPushButton::clicked, this, &NewInstanceDialog::accept);
 
     auto* cancelButton = m_buttons->button(QDialogButtonBox::Cancel);

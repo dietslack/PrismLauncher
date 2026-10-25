@@ -16,6 +16,7 @@
 class MinecraftInstance;
 class QButtonGroup;
 class QComboBox;
+class QDialog;
 class QLabel;
 class QLineEdit;
 class QPushButton;
@@ -114,6 +115,9 @@ class ContentTab : public QWidget {
     void checkForUpdates();
     void updateRows(const QList<int>& rows);
     void changeVersion(int row);
+    void browse(ContentModel::Type type);
+    /// Runs a Modrinth/CurseForge download dialog inside the main window and installs what was picked.
+    void runDownloadDialog(QDialog* dialog, ResourceFolderModel* folder);
     bool confirmWhileRunning(const QString& title);
     QList<int> visibleRows() const;
 
