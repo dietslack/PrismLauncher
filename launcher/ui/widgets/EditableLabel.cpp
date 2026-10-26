@@ -50,6 +50,14 @@ EditableLabel::EditableLabel(QWidget* parent) : QWidget(parent), m_edit(new QTex
     updatePalette();
 }
 
+void EditableLabel::setEditable(bool editable)
+{
+    m_edit->setReadOnly(!editable);
+    m_edit->setTextInteractionFlags(editable ? Qt::TextEditorInteraction : Qt::NoTextInteraction);
+    m_edit->setFocusPolicy(editable ? Qt::StrongFocus : Qt::NoFocus);
+    m_edit->viewport()->setCursor(editable ? Qt::IBeamCursor : Qt::ArrowCursor);
+}
+
 void EditableLabel::setTextAlignment(Qt::Alignment alignment)
 {
     m_alignment = alignment;

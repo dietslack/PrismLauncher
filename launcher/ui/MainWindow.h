@@ -243,6 +243,7 @@ class MainWindow : public QMainWindow {
     void refreshRecentInstances();
     void applyReprismActionIcons();
     void showLibrary();
+    void showInstanceSettings(bool focusName);
     void openInstancePage(MinecraftInstance* instance);
 
    private:

@@ -68,11 +68,13 @@ class ReprismOtherLogsPage : public OtherLogsPage {
 
 class Provider : public BasePageProvider {
    public:
-    Provider(MinecraftInstance* instance, InstanceGeneralPage::Actions actions) : m_instance(instance), m_actions(std::move(actions)) {}
+    Provider(MinecraftInstance* instance, InstanceGeneralPage::Actions actions, bool focusName)
+        : m_instance(instance), m_actions(std::move(actions)), m_focusName(focusName)
+    {}
     QList<BasePage*> getPages() override
     {
         QList<BasePage*> pages;
-        pages.append(new InstanceGeneralPage(m_instance, m_actions));
+        pages.append(new InstanceGeneralPage(m_instance, m_actions, m_focusName));
         pages.append(new InstallationPage(m_instance));
         if (m_instance->isManagedPack())
             pages.append(ManagedPackPage::createPage(m_instance));
@@ -87,6 +89,7 @@ class Provider : public BasePageProvider {
    private:
     MinecraftInstance* m_instance;
     InstanceGeneralPage::Actions m_actions;
+    bool m_focusName;
 };
 
 /// A row of the General page: title and description on the left, a button on the right.
@@ -117,8 +120,8 @@ QWidget* actionRow(QWidget* parent, const QString& title, const QString& descrip
 }
 }  // namespace
 
-InstanceGeneralPage::InstanceGeneralPage(MinecraftInstance* instance, const Actions& actions, QWidget* parent)
-    : QWidget(parent), m_instance(instance), m_actions(actions)
+InstanceGeneralPage::InstanceGeneralPage(MinecraftInstance* instance, const Actions& actions, bool focusName, QWidget* parent)
+    : QWidget(parent), m_instance(instance), m_actions(actions), m_focusName(focusName)
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -186,6 +189,17 @@ InstanceGeneralPage::InstanceGeneralPage(MinecraftInstance* instance, const Acti
     refreshIcon();
 }
 
+void InstanceGeneralPage::openedImpl()
+{
+    if (!m_focusName)
+        return;
+    m_focusName = false;
+    QMetaObject::invokeMethod(m_name, [this] {
+        m_name->setFocus();
+        m_name->selectAll();
+    }, Qt::QueuedConnection);
+}
+
 QIcon InstanceGeneralPage::icon() const
 {
     return lineIcon("info");
@@ -206,9 +220,9 @@ bool InstanceGeneralPage::apply()
 
 namespace InstanceSettingsWindow {
 
-void show(MinecraftInstance* instance, const InstanceGeneralPage::Actions& actions, QWidget* parent, const QString& page)
+void show(MinecraftInstance* instance, const InstanceGeneralPage::Actions& actions, QWidget* parent, const QString& page, bool focusName)
 {
-    Provider provider(instance, actions);
+    Provider provider(instance, actions, focusName);
     PageDialog dialog(&provider, page, parent);
     InAppModal::exec(&dialog, InAppModal::Size::Large);
 }

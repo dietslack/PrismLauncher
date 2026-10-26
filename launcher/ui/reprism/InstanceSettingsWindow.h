@@ -26,7 +26,8 @@ class InstanceGeneralPage : public QWidget, public BasePage {
         QAction* remove;
         std::function<void(MinecraftInstance*, const QString&)> rename;
     };
-    InstanceGeneralPage(MinecraftInstance* instance, const Actions& actions, QWidget* parent = nullptr);
+    InstanceGeneralPage(MinecraftInstance* instance, const Actions& actions, bool focusName = false, QWidget* parent = nullptr);
+    void openedImpl() override;
 
     QString id() const override { return "reprism-general"; }
     QString displayName() const override { return tr("General"); }
@@ -40,10 +41,13 @@ class InstanceGeneralPage : public QWidget, public BasePage {
     Actions m_actions;
     QToolButton* m_iconButton;
     QLineEdit* m_name;
+    bool m_focusName;
 };
 
 /// RePrism's instance settings: General, Installation, Game settings, Notes, Screenshots and Old logs, shown inside
 /// the main window. (Content, worlds, servers and the live log are on the instance page itself.)
 namespace InstanceSettingsWindow {
-void show(MinecraftInstance* instance, const InstanceGeneralPage::Actions& actions, QWidget* parent, const QString& page = {});
+/// `focusName` opens the General page with the name selected, ready to rename.
+void show(MinecraftInstance* instance, const InstanceGeneralPage::Actions& actions, QWidget* parent, const QString& page = {},
+          bool focusName = false);
 }

@@ -33,6 +33,8 @@ class EditableLabel : public QWidget {
 
     void setText(const QString& text);
     void setTextAlignment(Qt::Alignment alignment);
+    /// When false the label only displays its text (no focus, no editing).
+    void setEditable(bool editable);
 
     bool eventFilter(QObject* watched, QEvent* event) override;
 

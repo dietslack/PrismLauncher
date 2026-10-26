@@ -998,3 +998,9 @@ QPushButton#reprismDangerButton {
 QPushButton#reprismDangerButton:hover {
     background-color: rgba(255, 92, 92, 0.12);
 }
+
+/* The instance page title is read-only (rename in instance settings): no edit affordances. */
+#reprismHeaderName QTextEdit:hover, #reprismHeaderName QTextEdit:focus {
+    background: transparent;
+    border-color: transparent;
+}

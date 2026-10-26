@@ -1411,6 +1411,11 @@ void MainWindow::globalSettingsClosed()
 
 void MainWindow::on_actionEditInstance_triggered()
 {
+    showInstanceSettings(false);
+}
+
+void MainWindow::showInstanceSettings(bool focusName)
+{
     if (!m_selectedInstance)
         return;
 
@@ -1430,7 +1435,7 @@ void MainWindow::on_actionEditInstance_triggered()
                                                   if (instance == m_selectedInstance)
                                                       m_nameLabel->setText(instance->name());
                                               } };
-        InstanceSettingsWindow::show(m_selectedInstance, actions, this);
+        InstanceSettingsWindow::show(m_selectedInstance, actions, this, focusName ? QStringLiteral("reprism-general") : QString(), focusName);
         if (m_instancePage && m_instancePage->instance())
             m_instancePage->refreshHeader();
     } else {
@@ -1605,9 +1610,9 @@ void MainWindow::on_actionExportInstanceFlamePack_triggered()
 
 void MainWindow::on_actionRenameInstance_triggered()
 {
-    if (m_selectedInstance) {
-        view->edit(view->currentIndex());
-    }
+    // RePrism: instances are renamed only in the instance settings
+    if (m_selectedInstance)
+        showInstanceSettings(true);
 }
 
 void MainWindow::on_actionViewSelectedInstFolder_triggered()
@@ -1964,6 +1969,8 @@ void MainWindow::setupReprismShell()
     m_instancePage = new InstancePage({ ui->actionLaunchInstance, ui->actionKillInstance, ui->actionEditInstance }, m_changeIconButton,
                                       m_nameLabel, m_pages);
     m_nameLabel->setTextAlignment(Qt::AlignLeft);
+    m_nameLabel->setEditable(false);  // renaming happens in the instance settings
+    view->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_pages->addWidget(m_instancePage);
     connect(m_instancePage, &InstancePage::backRequested, this, &MainWindow::showLibrary);
 
