@@ -976,3 +976,25 @@ QListView#pageList::item:selected {
     background-color: @surface3@;
     color: @text@;
 }
+
+/* Instance settings: General page rows */
+#reprismSettingsRow {
+    background-color: @surface2@;
+    border-radius: 12px;
+}
+
+#reprismDangerText {
+    color: #ff5c5c;
+}
+
+QPushButton#reprismDangerButton {
+    color: #ff5c5c;
+    background-color: @surface2@;
+    border: 1px solid rgba(255, 92, 92, 0.45);
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+
+QPushButton#reprismDangerButton:hover {
+    background-color: rgba(255, 92, 92, 0.12);
+}

@@ -835,6 +835,8 @@ SET(LAUNCHER_SOURCES
     ui/reprism/NavRail.h
     ui/reprism/NavRail.cpp
     ui/reprism/InAppModal.h
+    ui/reprism/InstanceSettingsWindow.h
+    ui/reprism/InstanceSettingsWindow.cpp
     ui/reprism/InAppModal.cpp
     ui/reprism/PlayButton.h
     ui/reprism/PlayButton.cpp

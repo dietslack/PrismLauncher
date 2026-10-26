@@ -58,5 +58,8 @@
         <file>icons/file.svg</file>
         <file>icons/download.svg</file>
         <file>icons/history.svg</file>
+        <file>icons/wrench.svg</file>
+        <file>icons/cpu.svg</file>
+        <file>icons/notebook-pen.svg</file>
     </qresource>
 </RCC>

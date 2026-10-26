@@ -109,6 +109,7 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/reprism/InAppModal.h"
+#include "ui/reprism/InstanceSettingsWindow.h"
 #include "ui/reprism/InstanceCardDelegate.h"
 #include "ui/reprism/InstancePage.h"
 #include <QComboBox>
@@ -1414,7 +1415,24 @@ void MainWindow::on_actionEditInstance_triggered()
         return;
 
     if (m_selectedInstance->canEdit()) {
-        APPLICATION->showInstanceWindow(m_selectedInstance);
+        // RePrism: instance settings open inside the main window
+        InstanceGeneralPage::Actions actions{ ui->actionChangeInstIcon,
+                                              ui->actionCopyInstance,
+                                              ui->actionCreateInstanceShortcut,
+                                              ui->actionExportInstance->menu(),
+                                              ui->actionViewSelectedInstFolder,
+                                              ui->actionDeleteInstance,
+                                              [this](MinecraftInstance* instance, const QString& name) {
+                                                  auto* instances = APPLICATION->instances();
+                                                  const QString oldName = instance->name();
+                                                  if (instances->setData(instances->index(instances->getInstIndex(instance)), name, Qt::EditRole))
+                                                      handleInstanceRename(oldName, instance->name());
+                                                  if (instance == m_selectedInstance)
+                                                      m_nameLabel->setText(instance->name());
+                                              } };
+        InstanceSettingsWindow::show(m_selectedInstance, actions, this);
+        if (m_instancePage && m_instancePage->instance())
+            m_instancePage->refreshHeader();
     } else {
         CustomMessageBox::selectable(this, tr("Instance not editable"),
                                      tr("This instance is not editable. It may be broken, invalid, or too old. Check logs for details."),
