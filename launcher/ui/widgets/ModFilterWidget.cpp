@@ -220,7 +220,7 @@ void ModFilterWidget::loadVersionList()
             m_ui->versions->setEnabled(false);
             m_ui->showAllVersions->setEnabled(false);
         });
-        connect(task.get(), &Task::finished, this, [this] { m_versionsProxy->setSourceModel(m_versionList.get()); });
+        connect(task.get(), &Task::finished, this, [this] { setVersionListModel(); });
 
         if (!task->isRunning()) {
             task->start();
@@ -228,7 +228,24 @@ void ModFilterWidget::loadVersionList()
 
         return;
     }
+    setVersionListModel();
+}
+
+void ModFilterWidget::setVersionListModel()
+{
+    // RePrism: the version list often finishes loading after the default filter (the instance's Minecraft version) was
+    // set. Swapping in the list clears the dropdown's checks, which used to count as the user clearing the filter and
+    // triggered an unfiltered search. Keep the current selection and don't report it as a change.
+    QStringList checked;
+    for (const auto& version : m_filter->versions)
+        checked.append(version.toString());
+    const QString current = m_ui->version->currentText();
+
+    const QSignalBlocker blockVersions(m_ui->versions);
+    const QSignalBlocker blockVersion(m_ui->version);
     m_versionsProxy->setSourceModel(m_versionList.get());
+    m_ui->versions->setCheckedItems(checked);
+    m_ui->version->setCurrentIndex(m_ui->version->findText(current.isEmpty() && !checked.isEmpty() ? checked.first() : current));
 }
 
 void ModFilterWidget::prepareBasicFilter()

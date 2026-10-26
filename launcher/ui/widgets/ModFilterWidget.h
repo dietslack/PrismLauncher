@@ -115,6 +115,7 @@ class ModFilterWidget : public QTabWidget {
     ModFilterWidget(MinecraftInstance* instance, bool extendedSupport);
 
     void loadVersionList();
+    void setVersionListModel();
     void prepareBasicFilter();
 
    private slots:
