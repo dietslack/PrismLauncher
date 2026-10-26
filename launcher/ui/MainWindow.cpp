@@ -924,12 +924,7 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
     // RePrism: groups are not part of the UI, so new instances get none and the Group field is hidden
     groupName.clear();
     NewInstanceDialog newInstDlg(groupName, url, extra_info, this);
-    // RePrism: no Group or Location fields; new instances always go into the default instances folder
-    for (const char* name : { "groupBox", "groupLabel", "instDirBox", "instDirLabel" })
-        if (auto* widget = newInstDlg.findChild<QWidget*>(name))
-            widget->hide();
-    if (auto* location = newInstDlg.findChild<QComboBox*>("instDirBox"))
-        location->setCurrentIndex(0);  // "Default (instances)", not the last-used extra folder
+    newInstDlg.useReprismHeader();
     if (!InAppModal::exec(&newInstDlg, InAppModal::Size::Large))
         return;
 

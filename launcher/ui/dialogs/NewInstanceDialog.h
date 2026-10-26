@@ -61,6 +61,10 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
 
     void updateDialogState();
 
+    /// RePrism: simplified header. Hides Group and Location (new instances go into the default folder), and shows the
+    /// icon and Name only on the Custom page; modpack pages always name the instance after the chosen pack.
+    void useReprismHeader();
+
     void setSuggestedPack(const QString& name = QString(), InstanceTask* task = nullptr);
     void setSuggestedPack(const QString& name, QString version, InstanceTask* task = nullptr);
     void setSuggestedIconFromFile(const QString& path, const QString& name);
@@ -108,6 +112,8 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     QString m_suggestedName;
     bool m_nameFieldSelectedOnce = false;
     bool m_nameFieldEditedByUser = false;
+    bool m_reprismHeader = false;
+    void updateReprismHeader(BasePage* page);
 
     QString m_searchTerm;
 };

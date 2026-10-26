@@ -410,8 +410,48 @@ bool NewInstanceDialog::eventFilter(QObject* watched, QEvent* event)
     return QDialog::eventFilter(watched, event);
 }
 
+void NewInstanceDialog::useReprismHeader()
+{
+    m_reprismHeader = true;
+    for (QWidget* widget : { static_cast<QWidget*>(ui->groupBox), static_cast<QWidget*>(ui->groupLabel), static_cast<QWidget*>(ui->instDirBox),
+                             static_cast<QWidget*>(ui->instDirLabel) })
+        widget->hide();
+    ui->groupBox->setCurrentText(QString());
+    ui->instDirBox->setCurrentIndex(0);  // "Default (instances)", not the last-used extra folder
+    // With the other rows hidden, let the Name row take the icon's full height and center the label and field in it.
+    ui->gridLayout_2->setRowStretch(0, 1);
+    ui->gridLayout_2->setRowStretch(1, 0);
+    ui->gridLayout_2->setRowStretch(2, 0);
+    ui->gridLayout_2->setVerticalSpacing(0);
+    ui->gridLayout_2->setAlignment(ui->nameLabel, Qt::AlignVCenter);
+    ui->gridLayout_2->setAlignment(ui->instNameTextBox, Qt::AlignVCenter);
+    // The pages get all spare height, so hiding the header doesn't leave an empty band behind.
+    ui->verticalLayout->setStretchFactor(m_container, 1);
+    updateReprismHeader(m_container->selectedPage());
+}
+
+void NewInstanceDialog::updateReprismHeader(BasePage* page)
+{
+    if (!m_reprismHeader)
+        return;
+    const bool custom = page && page->id() == "vanilla";
+    for (QWidget* widget : { static_cast<QWidget*>(ui->iconButton), static_cast<QWidget*>(ui->nameLabel),
+                             static_cast<QWidget*>(ui->instNameTextBox), static_cast<QWidget*>(ui->line) })
+        widget->setVisible(custom);
+    if (!custom) {
+        // Modpacks are named after the pack: drop any name typed on the Custom page.
+        m_nameFieldEditedByUser = false;
+        ui->instNameTextBox->blockSignals(true);
+        ui->instNameTextBox->setText(m_suggestedName);
+        ui->instNameTextBox->blockSignals(false);
+        updateDialogState();
+    }
+}
+
 void NewInstanceDialog::selectedPageChanged(BasePage* previous, BasePage* selected)
 {
+    updateReprismHeader(selected);
+
     auto* prevPage = dynamic_cast<ModpackProviderBasePage*>(previous);
     if (prevPage) {
         m_searchTerm = prevPage->getSerachTerm();
