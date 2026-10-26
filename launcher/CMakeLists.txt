@@ -828,6 +828,8 @@ SET(LAUNCHER_SOURCES
     ui/reprism/ReprismIcons.cpp
     ui/reprism/InstanceSummary.h
     ui/reprism/ModpackAuthors.h
+    ui/reprism/ProjectIcons.h
+    ui/reprism/ProjectIcons.cpp
     ui/reprism/ModpackAuthors.cpp
     ui/reprism/InstanceSummary.cpp
     ui/reprism/InstanceCardDelegate.h

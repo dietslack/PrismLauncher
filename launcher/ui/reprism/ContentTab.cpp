@@ -45,6 +45,7 @@
 #include "minecraft/mod/ShaderPackFolderModel.h"
 #include "ui/reprism/InAppModal.h"
 #include "ui/reprism/InstanceSummary.h"
+#include "ui/reprism/ProjectIcons.h"
 #include "ui/reprism/ReprismIcons.h"
 
 namespace {
@@ -310,7 +311,13 @@ class SelectAllHeader : public QHeaderView {
 
 // ---------------------------------------------------------------- ContentModel
 
-ContentModel::ContentModel(QObject* parent) : QAbstractTableModel(parent) {}
+ContentModel::ContentModel(QObject* parent) : QAbstractTableModel(parent)
+{
+    connect(ProjectIcons::instance(), &ProjectIcons::iconsReady, this, [this] {
+        if (rowCount() > 0)
+            emit dataChanged(index(0, NameColumn), index(rowCount() - 1, NameColumn), { Qt::DecorationRole });
+    });
+}
 
 void ContentModel::setInstance(MinecraftInstance* instance)
 {
@@ -521,6 +528,9 @@ QVariant ContentModel::data(const QModelIndex& index, int role) const
                     image = mod->icon(QSize(0, 0));
                 else if (auto* pack = dynamic_cast<DataPack*>(res))
                     image = pack->image(QSize(0, 0));
+                // No bundled icon (common for NeoForge mods, always for shaders): use the project's icon from its platform.
+                if (image.isNull() && res->metadata())
+                    image = ProjectIcons::instance()->icon(res->metadata()->provider, res->metadata()->projectId.toString());
                 if (!image.isNull())
                     return image;
                 static const char* fallback[] = { "package", "image", "database", "sun" };
