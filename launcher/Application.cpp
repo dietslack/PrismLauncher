@@ -1703,7 +1703,7 @@ void Application::ShowGlobalSettings(class QWidget* parent, QString openPage)
         SettingsObject::Lock lock(APPLICATION->settings());
         PageDialog dlg(m_globalSettingsProvider.get(), std::move(openPage), parent);
         connect(&dlg, &PageDialog::applied, this, &Application::globalSettingsApplied);
-        InAppModal::exec(&dlg);  // RePrism: inside the main window when opened from it
+        InAppModal::exec(&dlg, InAppModal::Size::Large);  // RePrism: inside the main window when opened from it
     }
 }
 

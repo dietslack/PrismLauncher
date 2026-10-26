@@ -76,7 +76,7 @@ struct VisualGroup {
     int totalHeight() const;
 
     /// height of the group header, in pixels
-    static int headerHeight();
+    int headerHeight() const;
 
     /// height of the group content, in pixels
     int contentHeight() const;

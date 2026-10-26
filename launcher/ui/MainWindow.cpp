@@ -330,6 +330,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(view, &InstanceView::droppedURLs, this, &MainWindow::processURLs, Qt::QueuedConnection);
 
         proxymodel = new InstanceProxyModel(this);
+        proxymodel->setGroupsEnabled(false);
         proxymodel->setSourceModel(APPLICATION->instances());
         proxymodel->sort(0);
         connect(proxymodel, &InstanceProxyModel::dataChanged, this, &MainWindow::instanceDataChanged);
@@ -338,6 +339,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setObjectName(QStringLiteral("reprismInstanceView"));
         view->setCardLayout(InstanceCardDelegate::MinimumWidth, 12);
         view->setCardHotspot(&InstanceCardDelegate::playButtonRect);
+        // RePrism: no instance groups in the library (saved groups are kept, just not shown)
+        view->setShowGroups(false);
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
@@ -561,7 +564,7 @@ void MainWindow::showInstanceContextMenu(const QPoint& pos)
         actionVoid->setEnabled(false);
         actions.prepend(actionVoid);
     } else {
-        auto group = view->groupNameAt(pos);
+        auto group = view->showGroups() ? view->groupNameAt(pos) : QString();
 
         auto* actionVoid = new QAction(group.isNull() ? BuildConfig.LAUNCHER_DISPLAYNAME : group, menu);
         actionVoid->setEnabled(false);
@@ -882,6 +885,10 @@ void MainWindow::on_actionCopyInstance_triggered()
         return;
 
     CopyInstanceDialog copyInstDlg(m_selectedInstance, this);
+    // RePrism: groups are not part of the UI (the copy keeps the original's saved group)
+    for (const char* name : { "groupBox", "labelVersion_3" })
+        if (auto* widget = copyInstDlg.findChild<QWidget*>(name))
+            widget->hide();
     if (!InAppModal::exec(&copyInstDlg))
         return;
 
@@ -913,8 +920,13 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
         groupName = APPLICATION->settings()->get("LastUsedGroupForNewInstance").toString();
     }
 
+    // RePrism: groups are not part of the UI, so new instances get none and the Group field is hidden
+    groupName.clear();
     NewInstanceDialog newInstDlg(groupName, url, extra_info, this);
-    if (!InAppModal::exec(&newInstDlg))
+    for (const char* name : { "groupBox", "groupLabel" })
+        if (auto* widget = newInstDlg.findChild<QWidget*>(name))
+            widget->hide();
+    if (!InAppModal::exec(&newInstDlg, InAppModal::Size::Large))
         return;
 
     APPLICATION->settings()->set("LastUsedGroupForNewInstance", newInstDlg.instGroup());
@@ -1418,7 +1430,7 @@ void MainWindow::on_actionManageSkins_triggered()
 
     if (account && (account->accountType() == AccountType::MSA) && !account->isActive()) {
         SkinManageDialog dialog(this, account);
-        InAppModal::exec(&dialog);
+        InAppModal::exec(&dialog, InAppModal::Size::Large);
     }
 }
 
@@ -1478,7 +1490,7 @@ void MainWindow::on_actionMoreNews_triggered()
 {
     auto entries = m_newsChecker->getNewsEntries();
     NewsDialog news_dialog(entries, this);
-    InAppModal::exec(&news_dialog);
+    InAppModal::exec(&news_dialog, InAppModal::Size::Large);
 }
 
 void MainWindow::newsButtonClicked()
@@ -1486,7 +1498,7 @@ void MainWindow::newsButtonClicked()
     auto entries = m_newsChecker->getNewsEntries();
     NewsDialog news_dialog(entries, this);
     news_dialog.toggleArticleList();
-    InAppModal::exec(&news_dialog);
+    InAppModal::exec(&news_dialog, InAppModal::Size::Large);
 }
 
 void MainWindow::onCatChanged(int)
@@ -1547,7 +1559,7 @@ void MainWindow::on_actionExportInstanceZip_triggered()
 {
     if (m_selectedInstance) {
         ExportInstanceDialog dlg(m_selectedInstance, this);
-        InAppModal::exec(&dlg);
+        InAppModal::exec(&dlg, InAppModal::Size::Large);
     }
 }
 
@@ -1555,7 +1567,7 @@ void MainWindow::on_actionExportInstanceMrPack_triggered()
 {
     if (m_selectedInstance) {
         ExportPackDialog dlg(m_selectedInstance, this);
-        InAppModal::exec(&dlg);
+        InAppModal::exec(&dlg, InAppModal::Size::Large);
     }
 }
 
@@ -1570,7 +1582,7 @@ void MainWindow::on_actionExportInstanceFlamePack_triggered()
             return;
         }
         ExportPackDialog dlg(m_selectedInstance, this, ModPlatform::ResourceProvider::FLAME);
-        InAppModal::exec(&dlg);
+        InAppModal::exec(&dlg, InAppModal::Size::Large);
     }
 }
 
@@ -1863,6 +1875,7 @@ void MainWindow::setupReprismShell()
     }
     statusBar()->hide();
     ui->actionToggleStatusBar->setVisible(false);
+    ui->actionChangeInstGroup->setVisible(false);  // no groups in the new UI
     ui->actionLockToolbars->setVisible(false);
 
     // Navigation rail

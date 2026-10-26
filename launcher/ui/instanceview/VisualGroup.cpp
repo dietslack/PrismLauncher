@@ -215,8 +215,11 @@ int VisualGroup::totalHeight() const
     return headerHeight() + contentHeight();
 }
 
-int VisualGroup::headerHeight()
+int VisualGroup::headerHeight() const
 {
+    if (!view->showGroups()) {
+        return 0;
+    }
     QFont font(QApplication::font());
     font.setBold(true);
     QFontMetrics fontMetrics(font);

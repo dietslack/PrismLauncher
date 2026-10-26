@@ -22,7 +22,7 @@ constexpr int HostMargin = 32;
 /// Dimmed backdrop covering the host, holding the dialog's card in the middle.
 class Overlay : public QWidget {
    public:
-    Overlay(QWidget* host, QWidget* card) : QWidget(host), m_host(host), m_card(card)
+    Overlay(QWidget* host, QWidget* card, InAppModal::Size size) : QWidget(host), m_host(host), m_card(card), m_size(size)
     {
         setObjectName(QStringLiteral("reprismModalOverlay"));
         card->setParent(this);
@@ -33,9 +33,10 @@ class Overlay : public QWidget {
     void relayout()
     {
         setGeometry(m_host->rect());
-        // As large as the dialog wants, but never beyond the host.
-        const QSize wanted = m_card->sizeHint().expandedTo(m_preferred);
         const QSize available = size() - QSize(2 * HostMargin, 2 * HostMargin);
+        // Large: a fixed share of the window, so it scales with the screen. Fit: as large as the dialog wants.
+        const QSize wanted = m_size == InAppModal::Size::Large ? QSize(qRound(width() * 0.85), qRound(height() * 0.88))
+                                                               : m_card->sizeHint().expandedTo(m_preferred);
         const QSize cardSize = wanted.boundedTo(available).expandedTo(m_card->minimumSizeHint().boundedTo(available));
         m_card->setGeometry(QRect(QPoint((width() - cardSize.width()) / 2, (height() - cardSize.height()) / 2), cardSize));
     }
@@ -66,6 +67,7 @@ class Overlay : public QWidget {
    private:
     QWidget* m_host;
     QWidget* m_card;
+    InAppModal::Size m_size;
     QSize m_preferred;
 };
 
@@ -91,7 +93,7 @@ QString cleanTitle(QString title)
 
 namespace InAppModal {
 
-int exec(QDialog* dialog, QWidget* host)
+int exec(QDialog* dialog, Size size, QWidget* host)
 {
     if (!host)
         host = defaultHost(dialog);
@@ -133,7 +135,7 @@ int exec(QDialog* dialog, QWidget* host)
     dialog->setProperty("reprismEmbedded", true);
     layout->addWidget(dialog, 1);
 
-    auto* overlay = new Overlay(host, card);
+    auto* overlay = new Overlay(host, card, size);
     overlay->setPreferredSize(dialogSize + QSize(34, 70));  // keep the size the dialog asked for, plus the card chrome
     overlay->show();
     overlay->raise();

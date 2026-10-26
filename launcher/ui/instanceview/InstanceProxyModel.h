@@ -24,6 +24,9 @@ class InstanceProxyModel : public QSortFilterProxyModel {
    public:
     InstanceProxyModel(QObject* parent = 0);
 
+    /// RePrism: when false, every instance reports no group (the library is one flat grid). Saved groups are untouched.
+    void setGroupsEnabled(bool enabled);
+
    protected:
     QVariant data(const QModelIndex& index, int role) const override;
     bool lessThan(const QModelIndex& left, const QModelIndex& right) const override;
@@ -31,4 +34,5 @@ class InstanceProxyModel : public QSortFilterProxyModel {
 
    private:
     QCollator m_naturalSort;
+    bool m_groupsEnabled = true;
 };

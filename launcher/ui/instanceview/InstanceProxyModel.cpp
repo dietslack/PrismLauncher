@@ -30,8 +30,16 @@ InstanceProxyModel::InstanceProxyModel(QObject* parent) : QSortFilterProxyModel(
     m_naturalSort.setLocale(QLocale::system());
 }
 
+void InstanceProxyModel::setGroupsEnabled(bool enabled)
+{
+    m_groupsEnabled = enabled;
+    invalidate();
+}
+
 QVariant InstanceProxyModel::data(const QModelIndex& index, int role) const
 {
+    if (role == InstanceViewRoles::GroupRole && !m_groupsEnabled)
+        return QString();
     QVariant data = QSortFilterProxyModel::data(index, role);
     if (role == Qt::DecorationRole) {
         return QVariant(APPLICATION->icons()->getIcon(data.toString()));
@@ -41,6 +49,8 @@ QVariant InstanceProxyModel::data(const QModelIndex& index, int role) const
 
 bool InstanceProxyModel::lessThan(const QModelIndex& left, const QModelIndex& right) const
 {
+    if (!m_groupsEnabled)
+        return subSortLessThan(left, right);
     const QString leftCategory = left.data(InstanceViewRoles::GroupRole).toString();
     const QString rightCategory = right.data(InstanceViewRoles::GroupRole).toString();
     if (leftCategory == rightCategory) {

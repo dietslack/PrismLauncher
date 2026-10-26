@@ -84,6 +84,9 @@ class InstanceView : public QAbstractItemView {
     void setCardLayout(int minItemWidth, int spacing);
     int itemWidth() const;
     QModelIndex hoveredIndex() const { return m_hoverIndex; }
+    /// RePrism: hide group headers (with a flat model there is a single, header-less group) and disable regrouping by drag.
+    void setShowGroups(bool show);
+    bool showGroups() const { return m_showGroups; }
     /// Last mouse position over the viewport while hovering a card (viewport coordinates).
     QPoint hoverPosition() const { return m_hoverPos; }
     /// Clickable area within a card (e.g. its play button); shows a pointing-hand cursor over it.
@@ -137,6 +140,7 @@ class InstanceView : public QAbstractItemView {
     int m_spacing = 5;
     int m_itemWidth = 100;
     bool m_stretchItems = false;
+    bool m_showGroups = true;
     QPersistentModelIndex m_hoverIndex;
     QPoint m_hoverPos{ -1, -1 };
     std::function<QRect(const QRect&)> m_cardHotspot;

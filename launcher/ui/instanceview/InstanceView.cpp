@@ -181,7 +181,7 @@ void InstanceView::updateGeometries()
                 cat->update();
             } else {
                 auto cat = new VisualGroup(groupName, this);
-                if (m_fVisibility) {
+                if (m_fVisibility && m_showGroups) {
                     cat->collapsed = m_fVisibility(groupName);
                 }
                 cats.insert(groupName, cat);
@@ -273,6 +273,12 @@ void InstanceView::setCardLayout(int minItemWidth, int spacing)
     m_stretchItems = true;
     viewport()->setMouseTracking(true);
     m_currentItemsPerRow = calculateItemsPerRow();
+    updateGeometries();
+}
+
+void InstanceView::setShowGroups(bool show)
+{
+    m_showGroups = show;
     updateGeometries();
 }
 
@@ -553,7 +559,9 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
         option.rect.setHeight(height);
         option.rect.setLeft(m_leftMargin);
         option.rect.setRight(wpWidth - m_rightMargin);
-        category->drawHeader(&painter, option);
+        if (m_showGroups) {
+            category->drawHeader(&painter, option);
+        }
         option.rect = backup;
     }
 
@@ -674,7 +682,7 @@ void InstanceView::dropEvent(QDropEvent* event)
     auto mimedata = event->mimeData();
 
     if (event->source() == this) {
-        if (event->possibleActions() & Qt::MoveAction) {
+        if (m_showGroups && (event->possibleActions() & Qt::MoveAction)) {
             std::pair<VisualGroup*, VisualGroup::HitResults> dropPos = rowDropPos(event->position().toPoint());
             const VisualGroup* group = dropPos.first;
             auto hitResult = dropPos.second;

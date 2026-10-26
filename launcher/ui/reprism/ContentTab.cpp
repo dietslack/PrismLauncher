@@ -1109,7 +1109,7 @@ void ContentTab::browse(ContentModel::Type type)
 void ContentTab::runDownloadDialog(QDialog* dialog, ResourceFolderModel* folder)
 {
     auto* download = static_cast<ResourceDownload::ResourceDownloadDialog*>(dialog);
-    if (InAppModal::exec(download) != 0) {
+    if (InAppModal::exec(download, InAppModal::Size::Large) != 0) {
         ConcurrentTask tasks(tr("Downloading content"), APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
         connect(&tasks, &Task::failed, this,
                 [this](const QString& reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
