@@ -40,6 +40,8 @@
 #include "FileSystem.h"
 #include "minecraft/mod/MetadataHandler.h"
 
+#include <QDateTime>
+#include <QFileInfo>
 #include <QThread>
 #include <utility>
 
@@ -119,6 +121,16 @@ void ResourceFolderLoadTask::executeTask()
         while (iter.hasNext()) {
             auto resource = iter.next().value();
             if (resource->status() == ResourceStatus::NotInstalled) {
+                // RePrism: metadata is written before its file finishes downloading. Leave recent metadata alone so
+                // in-progress downloads don't lose it; a later load cleans it up if it really is orphaned.
+                const auto metadata = resource->metadata();
+                QString indexName = metadata ? metadata->slug : QString();
+                if (!indexName.isEmpty() && !indexName.endsWith(".pw.toml"))
+                    indexName += ".pw.toml";  // same naming as Packwiz's index files
+                const QFileInfo indexFile(m_index_dir.filePath(indexName));
+                if (!indexName.isEmpty() && indexFile.isFile() && indexFile.lastModified().secsTo(QDateTime::currentDateTime()) < 5 * 60) {
+                    continue;
+                }
                 resource->destroy(m_index_dir, false, false);
                 iter.remove();
             }

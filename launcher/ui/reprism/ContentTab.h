@@ -117,6 +117,9 @@ class ContentTab : public QWidget {
     void setEnabled(const QList<int>& rows, bool enabled);
     void deleteRows(const QList<int>& rows);
     void checkForUpdates();
+    /// Finds content without source metadata on Modrinth/CurseForge by file hash and records it. Returns false if
+    /// there was nothing to identify.
+    bool identifyUnknownContent();
     void updateRows(const QList<int>& rows);
     void changeVersion(int row);
     void browse(ContentModel::Type type);
@@ -137,7 +140,9 @@ class ContentTab : public QWidget {
     QLabel* m_bulkLabel;
     QPushButton* m_updateButton;
     QTimer* m_updateCheckTimer;
-    bool m_autoChecked = false;  ///< the automatic update check ran for this instance
+    bool m_autoChecked = false;     ///< the automatic update check ran for this instance
+    bool m_identifyTried = false;   ///< unknown content was looked up for this instance
+    Task::Ptr m_identifyTask;
 
     /// A running update check. CheckUpdateTask keeps references to its resource list and versions, so they live here.
     struct UpdateCheck {

@@ -61,12 +61,14 @@ ResourceFolderModel::~ResourceFolderModel()
 
 bool ResourceFolderModel::startWatching(const QStringList& paths)
 {
-    // Remove orphaned metadata next time
-    m_firstFolderLoad = true;
-
     if (m_isWatching) {
+        // RePrism: don't re-arm orphan cleanup here. No update runs on this path, so the next update -- e.g. one
+        // triggered by a download landing mid-batch -- would delete the metadata of downloads still in progress.
         return false;
     }
+
+    // Remove orphaned metadata next time
+    m_firstFolderLoad = true;
 
     auto couldntBeWatched = m_watcher.addPaths(paths);
     for (const auto& path : paths) {

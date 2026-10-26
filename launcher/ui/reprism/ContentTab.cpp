@@ -26,6 +26,7 @@
 #include "DesktopServices.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
+#include "modplatform/EnsureMetadataTask.h"
 #include "modplatform/flame/FlameCheckUpdate.h"
 #include "modplatform/modrinth/ModrinthCheckUpdate.h"
 #include "settings/SettingsObject.h"
@@ -746,8 +747,10 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     header->setSectionResizeMode(ContentModel::SelectColumn, QHeaderView::Fixed);
     header->resizeSection(ContentModel::SelectColumn, 40);
     header->setSectionResizeMode(ContentModel::NameColumn, QHeaderView::Stretch);
-    for (int c = ContentModel::VersionColumn; c < ContentModel::ActionsColumn; c++)
+    for (int c = ContentModel::VersionColumn; c < ContentModel::SourceColumn; c++)
         header->setSectionResizeMode(c, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(ContentModel::SourceColumn, QHeaderView::Fixed);  // fits "Local file" / "CurseForge"
+    header->resizeSection(ContentModel::SourceColumn, header->fontMetrics().horizontalAdvance("CurseForge") + 28);
     header->setSectionResizeMode(ContentModel::ActionsColumn, QHeaderView::Fixed);
     header->resizeSection(ContentModel::ActionsColumn, ActionsDelegate::Width);
     layout->addWidget(m_view, 1);
@@ -818,6 +821,7 @@ void ContentTab::setInstance(MinecraftInstance* instance)
 {
     m_instance = instance;
     m_autoChecked = false;
+    m_identifyTried = false;
     m_pendingUpdates.clear();
     m_model->setUpdates({});
     m_updateButton->setText(tr("Check for updates"));
@@ -946,10 +950,81 @@ bool ContentTab::confirmWhileRunning(const QString& title)
     return response == QMessageBox::Yes;
 }
 
+/// EnsureMetadataTask needs its files hashed first (as Prism's update dialog does it).
+static Task::Ptr withHashing(const shared_qobject_ptr<EnsureMetadataTask>& task)
+{
+    auto sequence = makeShared<SequentialTask>(QObject::tr("Identifying content"));
+    if (task->getHashingTask())
+        sequence->addTask(task->getHashingTask());
+    sequence->addTask(task);
+    return sequence;
+}
+
+bool ContentTab::identifyUnknownContent()
+{
+    if (!m_instance || m_identifyTask)
+        return m_identifyTask != nullptr;
+    m_identifyTried = true;
+
+    // Content downloaded through the launcher normally has metadata; files without it may still come from Modrinth or
+    // CurseForge (added by hand, or metadata lost). Look them up by hash, Modrinth first, like Prism's update dialog.
+    auto modrinth = makeShared<ConcurrentTask>(tr("Identifying content"));
+    auto flameCandidates = std::make_shared<QHash<ResourceFolderModel*, QList<Resource*>>>();
+    int count = 0;
+    for (const auto& [folder, type] : m_model->folders()) {
+        if (type == ContentModel::Type::DataPack && !m_instance->dataPackList())
+            continue;  // per-world data pack folders keep no metadata index
+        QList<Resource*> unknown;
+        for (int i = 0; i < folder->size(); i++) {
+            Resource& resource = folder->at(i);
+            if (!resource.metadata() && resource.type() != ResourceType::UNKNOWN)
+                unknown.append(&resource);
+        }
+        if (unknown.isEmpty())
+            continue;
+        count += unknown.size();
+        auto task = makeShared<EnsureMetadataTask>(unknown, folder->indexDir(), ModPlatform::ResourceProvider::MODRINTH);
+        connect(task.get(), &EnsureMetadataTask::metadataFailed, this,
+                [flameCandidates, folder](Resource* resource) { (*flameCandidates)[folder].append(resource); });
+        modrinth->addTask(withHashing(task));
+    }
+    if (count == 0)
+        return false;
+    qDebug() << "Identifying" << count << "item(s) of" << m_instance->name() << "content without source metadata";
+
+    m_identifyTask = modrinth;
+    auto finish = [this] {
+        QTimer::singleShot(0, this, [this] {
+            m_identifyTask.reset();
+            m_model->reload();
+            // Check for updates once the folders have reloaded with the new metadata. (A reload of unchanged files
+            // doesn't reset the model, so start the check timer directly.)
+            m_autoChecked = true;
+            m_updateCheckTimer->start(3000);
+        });
+    };
+    connect(modrinth.get(), &Task::finished, this, [this, flameCandidates, finish] {
+        if (flameCandidates->isEmpty() || APPLICATION->getFlameAPIKey().isEmpty()) {
+            finish();
+            return;
+        }
+        auto flame = makeShared<ConcurrentTask>(tr("Identifying content"));
+        for (auto it = flameCandidates->begin(); it != flameCandidates->end(); ++it)
+            flame->addTask(withHashing(makeShared<EnsureMetadataTask>(it.value(), it.key()->indexDir(), ModPlatform::ResourceProvider::FLAME)));
+        m_identifyTask = flame;
+        connect(flame.get(), &Task::finished, this, finish);
+        flame->start();
+    });
+    modrinth->start();
+    return true;
+}
+
 void ContentTab::checkForUpdates()
 {
     if (!m_instance || m_checkTask || APPLICATION->settings()->get("ModMetadataDisabled").toBool())
         return;
+    if (!m_identifyTried && identifyUnknownContent())
+        return;  // the update check runs after identification
     // Read the Minecraft version and loader from mmc-pack.json: the pack profile may not be loaded yet.
     const auto components = InstanceSummary::components(m_instance);
     if (components.minecraft.isEmpty()) {
