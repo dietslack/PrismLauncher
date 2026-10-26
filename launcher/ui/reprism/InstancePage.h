@@ -31,6 +31,8 @@ class InstancePage : public QFrame {
     MinecraftInstance* instance() const { return m_instance; }
     /// Re-reads the header facts (name, versions, playtime, running state).
     void refreshHeader();
+    /// Switches to the Logs tab.
+    void showLogs();
 
    signals:
     void backRequested();

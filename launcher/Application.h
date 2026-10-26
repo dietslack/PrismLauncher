@@ -201,6 +201,8 @@ class Application : public QApplication {
     void updateAllowedChanged(bool status);
     void globalSettingsAboutToOpen();
     void globalSettingsApplied();
+    /// RePrism: show an instance's game log inside the main window (instead of the separate console window).
+    void instanceLogsRequested(MinecraftInstance* instance);
     int currentCatChanged(int index);
 
     void oauthReplyRecieved(QVariantMap);

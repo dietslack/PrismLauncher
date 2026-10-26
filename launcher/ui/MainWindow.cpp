@@ -2003,6 +2003,15 @@ void MainWindow::setupReprismShell()
             showLibrary();
     });
     connect(ModpackAuthors::instance(), &ModpackAuthors::resolved, this, [this] { view->viewport()->update(); });
+    // Game logs (on launch or after a crash, per the console settings) show on the instance page, not in a separate window.
+    connect(APPLICATION, &Application::instanceLogsRequested, this, [this](MinecraftInstance* instance) {
+        if (!instance)
+            return;
+        if (!isVisible())
+            APPLICATION->showMainWindow();
+        openInstancePage(instance);
+        m_instancePage->showLogs();
+    });
     refreshRecentInstances();
     applyReprismActionIcons();
 }

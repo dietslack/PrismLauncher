@@ -147,6 +147,12 @@ void InstancePage::refreshHeader()
     m_playButton->refresh();
 }
 
+void InstancePage::showLogs()
+{
+    m_tabs->setCurrentIndex(LogsIndex);
+    showTab(LogsIndex);
+}
+
 void InstancePage::showTab(int index)
 {
     m_stack->setCurrentIndex(index);

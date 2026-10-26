@@ -386,7 +386,8 @@ void LaunchController::launchInstance()
     const auto* console = qobject_cast<InstanceWindow*>(m_parentWidget);
     const auto showConsole = m_instance->settings()->get("ShowConsole").toBool();
     if (!console && showConsole) {
-        APPLICATION->showInstanceWindow(m_instance);
+        // RePrism: the log is shown on the instance page instead of a separate console window
+        emit APPLICATION->instanceLogsRequested(m_instance);
     }
     connect(m_launcher, &LaunchTask::readyForLaunch, this, &LaunchController::readyForLaunch);
     connect(m_launcher, &LaunchTask::succeeded, this, &LaunchController::onSucceeded);
@@ -473,7 +474,8 @@ void LaunchController::onSucceeded()
 void LaunchController::onFailed(QString reason)
 {
     if (m_instance->settings()->get("ShowConsoleOnError").toBool()) {
-        APPLICATION->showInstanceWindow(m_instance, "console");
+        // RePrism: show the crash log on the instance page instead of opening the separate console window
+        emit APPLICATION->instanceLogsRequested(m_instance);
     }
     emitFailed(std::move(reason));
 }
