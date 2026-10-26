@@ -91,6 +91,10 @@ InstancePage::InstancePage(const Actions& actions, QWidget* iconButton, QWidget*
 
     m_stack = new QStackedWidget(this);
     m_content = new ContentTab(m_stack);
+    connect(m_content, &ContentTab::componentsChanged, this, [this] {
+        InstanceSummary::invalidate(m_instance ? m_instance->id() : QString());
+        refreshHeader();
+    });
     m_files = new FilesTab(m_stack);
     m_worlds = new WorldsTab(m_stack);
     m_logsHolder = new QWidget(m_stack);

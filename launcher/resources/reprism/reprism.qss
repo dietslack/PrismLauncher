@@ -888,18 +888,18 @@ QPushButton#reprismFilterChip:checked {
     border-color: @accent@;
 }
 
-QPushButton#reprismToolbarButton {
+QPushButton#reprismToolbarButton, QPushButton#reprismAddContentButton {
     background-color: @surface2@;
     border: 1px solid transparent;
     border-radius: 10px;
     padding: 6px 12px;
 }
 
-QPushButton#reprismToolbarButton:hover {
+QPushButton#reprismToolbarButton:hover, QPushButton#reprismAddContentButton:hover {
     border-color: @borderStrong@;
 }
 
-QPushButton#reprismToolbarButton::menu-indicator {
+QPushButton#reprismToolbarButton::menu-indicator, QPushButton#reprismAddContentButton::menu-indicator {
     image: none;
     width: 0px;
 }

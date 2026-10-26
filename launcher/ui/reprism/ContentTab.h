@@ -105,6 +105,10 @@ class ContentTab : public QWidget {
     explicit ContentTab(QWidget* parent = nullptr);
     void setInstance(MinecraftInstance* instance);
 
+   signals:
+    /// The instance's components (e.g. its mod loader) changed.
+    void componentsChanged();
+
    private:
     void updateCounts();
     void applySort(int option);

@@ -43,9 +43,9 @@ EOF
         printf 'ManagedPack=true\nManagedPackType=%s\nManagedPackID=%s\nManagedPackName=%s\nManagedPackVersionName=%s\n' "$ptype" "$pid" "$name" "$pver" >> "$DIR/instances/$id/instance.cfg"
     fi
     local loader=""
-    [ -n "$luid" ] && loader=", {\"uid\": \"$luid\", \"version\": \"$lver\"}"
+    [ -n "$luid" ] && loader=", {\"uid\": \"$luid\", \"version\": \"$lver\", \"cachedVersion\": \"$lver\"}"
     cat > "$DIR/instances/$id/mmc-pack.json" <<EOF
-{"formatVersion": 1, "components": [{"uid": "net.minecraft", "version": "$mc", "important": true}$loader]}
+{"formatVersion": 1, "components": [{"uid": "net.minecraft", "version": "$mc", "cachedVersion": "$mc", "cachedName": "Minecraft", "important": true}$loader]}
 EOF
 }
 

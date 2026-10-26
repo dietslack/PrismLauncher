@@ -31,7 +31,9 @@
 #include "settings/SettingsObject.h"
 #include "tasks/ConcurrentTask.h"
 #include "tasks/SequentialTask.h"
+#include "net/Mode.h"
 #include "ui/dialogs/CustomMessageBox.h"
+#include "ui/dialogs/InstallLoaderDialog.h"
 #include "ui/dialogs/ProgressDialog.h"
 #include "ui/dialogs/ResourceDownloadDialog.h"
 #include "minecraft/mod/DataPack.h"
@@ -678,7 +680,7 @@ ContentTab::ContentTab(QWidget* parent) : QWidget(parent)
     toolbar->addWidget(m_updateButton);
 
     auto* addButton = new QPushButton(ReprismIcons::icon("plus", palette().color(QPalette::ButtonText)), tr("Add"), this);
-    addButton->setObjectName(QStringLiteral("reprismToolbarButton"));
+    addButton->setObjectName(QStringLiteral("reprismAddContentButton"));
     auto* addMenu = new QMenu(addButton);
     for (auto type : { ContentModel::Type::Mod, ContentModel::Type::ResourcePack, ContentModel::Type::DataPack, ContentModel::Type::Shader })
         addMenu->addAction(ReprismIcons::icon("search", palette().color(QPalette::WindowText)),
@@ -1086,6 +1088,27 @@ void ContentTab::browse(ContentModel::Type type)
     ResourceFolderModel* folder = m_model->folder(type);
     if (!m_instance || !folder)
         return;
+
+    // The browser filters by the instance's Minecraft version and loaders: make sure those are loaded.
+    auto* profile = m_instance->getPackProfile();
+    if (!profile->getComponent("net.minecraft")) {
+        if (auto res = profile->reload(Net::Mode::Offline); !res)
+            qWarning() << "Failed to load components of" << m_instance->name() << res.error();
+    }
+    // Mods need a mod loader; offer to install one, as Prism's mods page does.
+    if (type == ContentModel::Type::Mod && !profile->getModLoaders().has_value()) {
+        const auto answer = QMessageBox::question(this, tr("Missing mod loader"),
+                                                  tr("This instance has no mod loader. Install one (Fabric, Forge, NeoForge or Quilt) "
+                                                     "before adding mods?"),
+                                                  QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+        if (answer != QMessageBox::Yes)
+            return;
+        InstallLoaderDialog installer(profile, QString(), this);
+        if (InAppModal::exec(&installer) == 0 || !profile->getModLoaders().has_value())
+            return;
+        emit componentsChanged();
+    }
+
     using ResourceDownload::ResourceDownloadDialog;
     ResourceDownloadDialog* dialog = nullptr;
     switch (type) {
@@ -1102,8 +1125,17 @@ void ContentTab::browse(ContentModel::Type type)
             dialog = ResourceDownloadDialog::createShaderPack(this, folder, m_instance);
             break;
     }
-    if (dialog)
-        runDownloadDialog(dialog, folder);
+    if (!dialog)
+        return;
+    if (dialog->getPages().isEmpty()) {
+        // Neither Modrinth nor CurseForge supports this instance's setup (or CurseForge has no API key).
+        dialog->deleteLater();
+        QMessageBox::information(this, tr("Nothing to browse"),
+                                 tr("Modrinth and CurseForge don't offer %1 for this instance's Minecraft version and mod loader.")
+                                     .arg(ContentModel::typeName(type).toLower() + "s"));
+        return;
+    }
+    runDownloadDialog(dialog, folder);
 }
 
 void ContentTab::runDownloadDialog(QDialog* dialog, ResourceFolderModel* folder)

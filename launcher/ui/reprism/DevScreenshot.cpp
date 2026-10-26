@@ -9,6 +9,7 @@
 #include <QContextMenuEvent>
 #include <QDir>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMouseEvent>
 #include <QTimer>
 #include <QWidget>
@@ -137,6 +138,26 @@ void install()
                 return;
             }
             qWarning() << "DevScreenshot: nothing visible named" << target[0];
+        });
+    }
+
+    // "text" picks the item starting with that text from the open menu (e.g. after clicking a menu button).
+    const QString menuItem = qEnvironmentVariable("REPRISM_SCREENSHOT_MENU");
+    if (!menuItem.isEmpty()) {
+        QTimer::singleShot(delay * 3 / 4, qApp, [menuItem] {
+            for (auto* window : QApplication::topLevelWidgets()) {
+                auto* menu = qobject_cast<QMenu*>(window);
+                if (!menu || !menu->isVisible())
+                    continue;
+                for (QAction* action : menu->actions()) {
+                    if (action->text().startsWith(menuItem)) {
+                        menu->close();
+                        QTimer::singleShot(0, action, &QAction::trigger);
+                        return;
+                    }
+                }
+            }
+            qWarning() << "DevScreenshot: no open menu item" << menuItem;
         });
     }
 
